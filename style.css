@@ -273,7 +273,16 @@ input[type=color]{width:44px;height:28px;padding:0;border:1px solid var(--line);
   #bottomNav button{height:46px;border:0;background:transparent;color:var(--mute)}
   #bottomNav button[aria-current=page]{color:var(--accentText);font-weight:700}
   #fab{display:flex;align-items:center;justify-content:center;position:fixed;right:16px;bottom:calc(70px + env(safe-area-inset-bottom));width:54px;height:54px;border:0;border-radius:16px;background:var(--accent);color:var(--onaccent);font-size:28px;line-height:1;box-shadow:0 6px 16px rgba(0,0,0,.3);z-index:16}
-  .wk-in{min-width:560px}
+  .wk-in{min-width:0}
+  .wk-head,.wk-body{grid-template-columns:34px repeat(var(--n),minmax(0,1fr))}
+  .gutter span{right:3px;font-size:.72em}
+  .dh{padding:6px 1px 5px;text-align:center}
+  .dh .top{flex-direction:column;align-items:center;gap:0;font-size:.85em}
+  .dh .num{font-size:1.25em}
+  .dh .load{display:none}
+  .ev{padding:2px 3px;border-radius:5px;font-size:.72em;line-height:1.15}
+  .ev b{white-space:normal;word-break:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+  .ev span{display:none}
   dialog,dialog.wide-dlg{width:96vw;padding:14px;max-height:92vh;overflow:auto}
   .row3{grid-template-columns:1fr 1fr}
   .row3 .field:first-child{grid-column:1 / -1}
