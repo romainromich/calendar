@@ -456,8 +456,8 @@ input[type=color]{width:44px;height:28px;padding:0;border:1px solid var(--line);
   .dh.today .num{color:var(--accent)}
   .col{border-left:1px solid color-mix(in srgb,var(--line) 60%,transparent);background-image:repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--hh) - 1px),color-mix(in srgb,var(--line) 70%,transparent) calc(var(--hh) - 1px),color-mix(in srgb,var(--line) 70%,transparent) var(--hh))}
   .col.today{background-color:color-mix(in srgb,var(--accent) 6%,transparent)}
-  .ev{border-radius:12px;border:0;border-left:3px solid var(--c);background:color-mix(in srgb,var(--c) 22%,transparent);padding:4px 8px;box-shadow:none}
-  .ev:hover{background:color-mix(in srgb,var(--c) 30%,transparent);filter:none}
+  .ev{border-radius:10px;border:1px solid color-mix(in srgb,var(--c) 38%,transparent);background:color-mix(in srgb,var(--c) 20%,transparent);padding:4px 8px;box-shadow:none}
+  .ev:hover{background:color-mix(in srgb,var(--c) 28%,transparent);filter:none}
   .nowline{background:var(--accent);box-shadow:0 0 10px var(--accent)}
   .nowline::before{background:var(--accent)}
   .mo-cell{border-color:color-mix(in srgb,var(--line) 60%,transparent)}
@@ -520,3 +520,35 @@ input[type=color]{width:44px;height:28px;padding:0;border:1px solid var(--line);
   .empty.big{padding:28px 8px;text-align:center;line-height:1.6}
 }
 @media(min-width:1181px){#topbar{flex-wrap:nowrap}#topbar h1{white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}#weekNo{display:none}.nav,.seg,#searchBtn{flex:none}.quick{flex:1 1 120px;min-width:110px;max-width:260px}.grow{flex:1 1 0;min-width:0}}
+
+/* ===== Диалоги в стиле H ===== */
+dialog{border-radius:32px;border:1px solid color-mix(in srgb,var(--ink) 16%,transparent);background:color-mix(in srgb,var(--panel) 94%,transparent);-webkit-backdrop-filter:blur(28px);backdrop-filter:blur(28px);padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+dialog::backdrop{background:rgba(2,3,5,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+dialog h2{font-size:22px;font-weight:800;letter-spacing:-.4px;margin-bottom:16px}
+dialog .field{font-size:12px;font-weight:600;color:var(--mute);gap:6px;margin-bottom:14px}
+dialog input:not([type=checkbox]):not([type=color]),dialog select,dialog textarea{border-radius:18px;background:color-mix(in srgb,var(--ink) 5%,var(--panel));border:1px solid var(--line);padding:10px 14px;color:var(--ink);font-size:15px;font-weight:500;min-height:44px;box-sizing:border-box}
+dialog textarea{border-radius:20px;min-height:76px;resize:vertical}
+dialog input:focus,dialog select:focus,dialog textarea:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+#evTitle{font-size:18px;font-weight:700}
+dialog .check{height:44px;padding:0 16px 0 12px;border:1px solid var(--line);border-radius:22px;background:color-mix(in srgb,var(--ink) 5%,var(--panel));width:fit-content;gap:10px;font-size:14px;color:var(--ink);margin-bottom:14px}
+dialog input[type=checkbox]{accent-color:var(--accent);width:20px;height:20px}
+.daysrow{gap:6px}
+.daytog{position:relative;display:flex;align-items:center;justify-content:center;min-width:44px;height:40px;padding:0 10px;border:1px solid var(--line);border-radius:20px;background:color-mix(in srgb,var(--ink) 5%,var(--panel));font-weight:600;font-size:13px;cursor:pointer}
+.daysrow .daytog{flex:1 1 0;min-width:0;padding:0}
+dialog .row2>*,dialog .row3>*{min-width:0}
+dialog .field input:not([type=checkbox]),dialog .field select,dialog .field textarea{width:100%;max-width:100%}
+.daytog input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.daytog:has(input:checked){background:var(--accent);border-color:var(--accent);color:var(--onaccent)}
+dialog .btn{border-radius:22px;height:44px;padding:0 18px;font-weight:600}
+dialog .btn.primary{box-shadow:0 8px 22px color-mix(in srgb,var(--accent) 32%,transparent)}
+dialog .dlg-actions{margin-top:10px;gap:10px}
+dialog .note{border-radius:18px}
+.scope-list .btn{height:52px}
+.sr-row{border-radius:16px;padding:10px 12px}
+@keyframes sheetUp{from{transform:translateY(36px);opacity:0}to{transform:none;opacity:1}}
+dialog[open]{animation:sheetUp .26s cubic-bezier(.2,.8,.2,1)}
+@media(max-width:760px){
+  dialog[open],dialog.wide-dlg[open]{margin:auto 8px calc(8px + env(safe-area-inset-bottom));width:calc(100vw - 16px);max-width:none;max-height:calc(100vh - 36px);border-radius:36px;padding:20px 16px 16px;box-sizing:border-box}
+  dialog .row2{grid-template-columns:1fr 1fr}
+  #evDialog .dlg-actions{position:sticky;bottom:-16px;background:linear-gradient(to bottom,transparent,var(--panel) 36%);padding:18px 0 4px;margin-bottom:-4px}
+}
