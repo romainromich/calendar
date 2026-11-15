@@ -300,8 +300,8 @@ input[type=color]{width:44px;height:28px;padding:0;border:1px solid var(--line);
 @media(max-width:760px){
   body{background:var(--bg)}
   body::before,body::after{content:"";position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(56px)}
-  body::before{left:-90px;top:120px;width:260px;height:260px;background:var(--accent);opacity:calc(.09*var(--glow,1))}
-  body::after{right:-100px;top:420px;width:280px;height:280px;background:var(--a2,#A78BFA);opacity:calc(.12*var(--glow,1))}
+  body::before{left:-110px;top:100px;width:340px;height:340px;background:var(--accent);opacity:calc(.16*var(--glow,1))}
+  body::after{right:-120px;top:400px;width:360px;height:360px;background:var(--a2,#A78BFA);opacity:calc(.2*var(--glow,1))}
   #app{position:relative;z-index:1;padding-bottom:0}
   #app::after{content:"";position:fixed;left:0;right:0;bottom:0;height:140px;background:linear-gradient(to bottom,transparent,var(--bg) 72%);pointer-events:none;z-index:14}
   #center,#topbar{background:transparent}
@@ -425,8 +425,8 @@ input[type=color]{width:44px;height:28px;padding:0;border:1px solid var(--line);
 @media(min-width:761px){
   body{background:var(--bg)}
   body::before,body::after{content:"";position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(90px)}
-  body::before{left:-80px;top:80px;width:420px;height:420px;background:var(--accent);opacity:calc(.10*var(--glow,1))}
-  body::after{right:-120px;bottom:-60px;width:480px;height:480px;background:var(--a2,#A78BFA);opacity:calc(.13*var(--glow,1))}
+  body::before{left:-100px;top:60px;width:540px;height:540px;background:var(--accent);opacity:calc(.17*var(--glow,1))}
+  body::after{right:-140px;bottom:-80px;width:600px;height:600px;background:var(--a2,#A78BFA);opacity:calc(.22*var(--glow,1))}
   #app{position:relative;z-index:1;gap:14px;padding:14px;grid-template-columns:248px minmax(0,1fr) 312px}
   #side,#right,#center{border:1px solid var(--line);border-radius:28px;background:color-mix(in srgb,var(--panel) 78%,transparent);-webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%)}
   #side{top:14px;height:calc(100vh - 28px);padding:18px}

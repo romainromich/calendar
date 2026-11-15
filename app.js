@@ -252,7 +252,7 @@
     var r = document.documentElement.style, c = S.settings.colors;
     COLOR_LABELS.forEach(function (p) { r.setProperty('--' + p[0], c[p[0]]); });
     r.setProperty('--a2', c.a2 || '#A78BFA');
-    r.setProperty('--glow', lum(c.bg) < 0.25 ? '1' : '.55');
+    r.setProperty('--glow', lum(c.bg) < 0.25 ? '1' : '.7');
     r.setProperty('--onaccent', lum(c.accent) > 0.4 ? '#111111' : '#FFFFFF');
     r.setProperty('--fs', S.settings.font + 'px');
     r.setProperty('--hh', HH() + 'px');
