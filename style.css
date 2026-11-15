@@ -545,10 +545,10 @@ dialog .dlg-actions{margin-top:10px;gap:10px}
 dialog .note{border-radius:18px}
 .scope-list .btn{height:52px}
 .sr-row{border-radius:16px;padding:10px 12px}
-@keyframes sheetUp{from{transform:translateY(36px);opacity:0}to{transform:none;opacity:1}}
+@keyframes sheetUp{from{transform:translateY(14px) scale(.97);opacity:0}to{transform:none;opacity:1}}
 dialog[open]{animation:sheetUp .26s cubic-bezier(.2,.8,.2,1)}
 @media(max-width:760px){
-  dialog[open],dialog.wide-dlg[open]{margin:auto 8px calc(8px + env(safe-area-inset-bottom));width:calc(100vw - 16px);max-width:none;max-height:calc(100vh - 36px);border-radius:36px;padding:20px 16px 16px;box-sizing:border-box}
+  dialog[open],dialog.wide-dlg[open]{margin:auto;width:calc(100vw - 24px);max-width:none;max-height:calc(100vh - 48px);border-radius:32px;padding:20px 16px 16px;box-sizing:border-box}
   dialog .row2{grid-template-columns:1fr 1fr}
   #evDialog .dlg-actions{position:sticky;bottom:-16px;background:linear-gradient(to bottom,transparent,var(--panel) 36%);padding:18px 0 4px;margin-bottom:-4px}
 }
