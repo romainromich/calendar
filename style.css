@@ -300,8 +300,8 @@ input[type=color]{width:44px;height:28px;padding:0;border:1px solid var(--line);
 @media(max-width:760px){
   body{background:var(--bg)}
   body::before,body::after{content:"";position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(56px)}
-  body::before{left:-110px;top:100px;width:340px;height:340px;background:var(--accent);opacity:calc(.16*var(--glow,1))}
-  body::after{right:-120px;top:400px;width:360px;height:360px;background:var(--a2,#A78BFA);opacity:calc(.2*var(--glow,1))}
+  body::before{left:-90px;top:120px;width:260px;height:260px;background:var(--accent);opacity:calc(.09*var(--glow,1))}
+  body::after{right:-100px;top:420px;width:280px;height:280px;background:var(--a2,#A78BFA);opacity:calc(.12*var(--glow,1))}
   #app{position:relative;z-index:1;padding-bottom:0}
   #app::after{content:"";position:fixed;left:0;right:0;bottom:0;height:140px;background:linear-gradient(to bottom,transparent,var(--bg) 72%);pointer-events:none;z-index:14}
   #center,#topbar{background:transparent}
@@ -546,7 +546,7 @@ dialog .note{border-radius:18px}
 .scope-list .btn{height:52px}
 .sr-row{border-radius:16px;padding:10px 12px}
 @keyframes sheetUp{from{transform:translateY(14px) scale(.97);opacity:0}to{transform:none;opacity:1}}
-dialog[open]{animation:sheetUp .26s cubic-bezier(.2,.8,.2,1)}
+dialog[open]{animation:sheetUp .55s cubic-bezier(.22,.8,.24,1)}
 @media(max-width:760px){
   dialog[open],dialog.wide-dlg[open]{margin:auto;width:calc(100vw - 24px);max-width:none;max-height:calc(100vh - 48px);border-radius:32px;padding:20px 16px 16px;box-sizing:border-box}
   dialog .row2{grid-template-columns:1fr 1fr}
