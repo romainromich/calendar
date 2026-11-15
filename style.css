@@ -399,7 +399,8 @@ input[type=color]{width:44px;height:28px;padding:0;border:1px solid var(--line);
   #app.menu #side{transform:none;box-shadow:0 -20px 60px rgba(0,0,0,.45)}
   #side .brand,#side #newEvent,#side>.grow{display:none}
   .sheet-head{display:flex;flex:1 1 100%;align-items:center;gap:10px;flex-wrap:wrap;padding:0 4px;position:relative;padding-top:14px}
-  .sheet-head .grabber{position:absolute;top:0;left:50%;transform:translateX(-50%);width:40px;height:5px;border-radius:3px;background:color-mix(in srgb,var(--mute) 60%,transparent)}
+  .sheet-head{touch-action:none;padding-top:26px;cursor:grab}
+  .sheet-head .grabber{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:40px;height:5px;border-radius:3px;background:color-mix(in srgb,var(--mute) 60%,transparent)}
   .sheet-head b{flex:1;font-size:22px;letter-spacing:-.4px}
   .sheet-head .btn{border-radius:20px;height:40px;background:color-mix(in srgb,var(--ink) 6%,transparent)}
   #side>section{flex:1 1 100%;min-width:0}

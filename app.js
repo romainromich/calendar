@@ -1134,14 +1134,29 @@
   $('#menuBtn').addEventListener('click', function () { $('#app').classList.toggle('menu'); });
   $('#scrim').addEventListener('click', function () { $('#app').classList.remove('menu'); });
   $('#sheetSearch').addEventListener('click', function () { $('#app').classList.remove('menu'); openSearch(); });
-  /* шторку можно смахнуть вниз за верхнюю часть */
+  /* шторку можно утащить вниз за верхнюю часть (ползунок и заголовок) */
   (function () {
-    var y0 = null, head = $('.sheet-head');
-    head.addEventListener('touchstart', function (e) { y0 = e.touches[0].clientY; }, { passive: true });
-    head.addEventListener('touchend', function (e) {
-      if (y0 != null && e.changedTouches[0].clientY - y0 > 50) $('#app').classList.remove('menu');
+    var head = $('.sheet-head'), side = $('#side'), y0 = null, dy = 0, t0 = 0;
+    head.addEventListener('pointerdown', function (e) {
+      if (e.target.closest('button')) return;
+      y0 = e.clientY; dy = 0; t0 = Date.now();
+      side.style.transition = 'none';
+      try { head.setPointerCapture(e.pointerId); } catch (err) { /* не критично */ }
+    });
+    head.addEventListener('pointermove', function (e) {
+      if (y0 == null) return;
+      dy = Math.max(0, e.clientY - y0);
+      side.style.transform = 'translateY(' + dy + 'px)';
+    });
+    function end() {
+      if (y0 == null) return;
+      var fast = dy / (Date.now() - t0 + 1) > 0.5;
       y0 = null;
-    }, { passive: true });
+      side.style.transition = ''; side.style.transform = '';
+      if (dy > 90 || (fast && dy > 30)) $('#app').classList.remove('menu');
+    }
+    head.addEventListener('pointerup', end);
+    head.addEventListener('pointercancel', end);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('#app').classList.remove('menu'); });
   })();
   $('#openSettings').addEventListener('click', function () { $('#app').classList.remove('menu'); });
