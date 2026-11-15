@@ -51,6 +51,11 @@
     indigo:   { name: 'Индиго',   c: { bg: '#090A12', panel: '#14151F', ink: '#F2F3FA', line: '#2A2C3B', accent: '#8B9BFF', a2: '#F0ABFC' } },
     lime:     { name: 'Лайм',     c: { bg: '#090B08', panel: '#131610', ink: '#F3F6EE', line: '#2A2F24', accent: '#C6F24E', a2: '#5EEAD4' } },
     rose:     { name: 'Роза',     c: { bg: '#0D090B', panel: '#191215', ink: '#F8F1F3', line: '#33282D', accent: '#FF7AA8', a2: '#FFC6A0' } },
+    dayMint:  { name: 'Мята · день',   c: { bg: '#F1F6F4', panel: '#FFFFFF', ink: '#10231F', line: '#D8E5E1', accent: '#0FA98F', a2: '#7C5CE0' } },
+    dayAmber: { name: 'Янтарь · день', c: { bg: '#FAF4EC', panel: '#FFFFFF', ink: '#2A1D10', line: '#EADFCF', accent: '#E8730C', a2: '#D9455B' } },
+    dayIndigo:{ name: 'Индиго · день', c: { bg: '#F3F4FB', panel: '#FFFFFF', ink: '#12142B', line: '#DEE0F0', accent: '#4F5FE0', a2: '#C04BE0' } },
+    dayLime:  { name: 'Лайм · день',   c: { bg: '#F5F8EC', panel: '#FFFFFF', ink: '#1B2410', line: '#E0E8CC', accent: '#5E8F0B', a2: '#0FA98F' } },
+    dayRose:  { name: 'Роза · день',   c: { bg: '#FBF2F4', panel: '#FFFFFF', ink: '#2B1119', line: '#F0DCE2', accent: '#E0457B', a2: '#F08A4B' } },
     light:    { name: 'Светлая',  c: { bg: '#F4F5F7', panel: '#FFFFFF', ink: '#14171C', line: '#E3E6EB', accent: '#3B5BDB' } },
     dark:     { name: 'Тёмная',   c: { bg: '#0F1217', panel: '#171B22', ink: '#E8EBF0', line: '#2A313C', accent: '#8FA8FF' } },
     warm:     { name: 'Тёплая',   c: { bg: '#F6F1E9', panel: '#FFFCF7', ink: '#2B2118', line: '#E6DCCB', accent: '#C2410C' } },
@@ -247,6 +252,7 @@
     var r = document.documentElement.style, c = S.settings.colors;
     COLOR_LABELS.forEach(function (p) { r.setProperty('--' + p[0], c[p[0]]); });
     r.setProperty('--a2', c.a2 || '#A78BFA');
+    r.setProperty('--glow', lum(c.bg) < 0.25 ? '1' : '.55');
     r.setProperty('--onaccent', lum(c.accent) > 0.4 ? '#111111' : '#FFFFFF');
     r.setProperty('--fs', S.settings.font + 'px');
     r.setProperty('--hh', HH() + 'px');
@@ -1141,6 +1147,7 @@
     }, { passive: true });
   })();
   syncNav();
+  window.addEventListener('scroll', function () { $('#app').classList.toggle('scrolled', window.scrollY > 6); }, { passive: true });
   if (window.matchMedia) window.matchMedia('(max-width: 760px)').addEventListener('change', function () { render(); });
 
   document.addEventListener('keydown', function (e) {
