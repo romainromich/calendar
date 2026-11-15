@@ -274,7 +274,7 @@
         : a.getDate() + ' ' + MON_SHORT[a.getMonth()] + ' – ' + b.getDate() + ' ' + MON_SHORT[b.getMonth()] + ' ' + b.getFullYear();
     }
     var ttl = $('#title');
-    if (m === 'day' && isMobile()) ttl.replaceChildren(h('small', null, DOW_LONG[anchor.getDay()]), h('span', null, anchor.getDate() + ' ' + MON_GEN[anchor.getMonth()]));
+    if (m === 'day') ttl.replaceChildren(h('small', null, DOW_LONG[anchor.getDay()]), h('span', null, anchor.getDate() + ' ' + MON_GEN[anchor.getMonth()]));
     else ttl.textContent = t;
     $('#weekNo').textContent = m === 'week' ? 'неделя ' + isoWeek(viewDays()[S.settings.weekStart === 1 ? 0 : 1]) : '';
     var seg = $('#seg');
@@ -342,7 +342,7 @@
   function renderView() {
     var root = $('#view');
     if (S.settings.view === 'month') { root.replaceChildren(renderMonth()); return; }
-    if (isMobile() && S.settings.view === 'day') { root.replaceChildren(renderAgenda()); return; }
+    if (S.settings.view === 'day') { root.replaceChildren(renderAgenda()); return; }
     var days = viewDays(), hh = HH(), hs = S.settings.hourStart, he = S.settings.hourEnd, td = today();
     var now = new Date(), nowM = now.getHours() * 60 + now.getMinutes();
     var head = h('div', { class: 'wk-head', style: '--n:' + days.length }, h('div', null));
