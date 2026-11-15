@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Календарь</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#3B5BDB">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app" data-tab="cal">
+<div id="scrim"></div>
+
+<aside id="side">
+  <div class="brand"><div class="logo" id="logo">1</div><div class="brand-name">Календарь</div></div>
+  <button type="button" class="btn primary wide" id="newEvent">+ Новое событие</button>
+
+  <section>
+    <div class="mini-head">
+      <b id="miniTitle"></b>
+      <span>
+        <button type="button" class="icon-btn sm" id="miniPrev" aria-label="Предыдущий месяц">‹</button>
+        <button type="button" class="icon-btn sm" id="miniNext" aria-label="Следующий месяц">›</button>
+      </span>
+    </div>
+    <div id="mini"></div>
+  </section>
+
+  <section>
+    <div class="sec-title"><b>Календари</b><span class="mute">фильтр</span></div>
+    <div id="cats"></div>
+  </section>
+
+  <div class="grow"></div>
+
+  <section class="card" id="gcard">
+    <div class="g-row"><b>Google Calendar</b></div>
+    <div class="mute small">Синхронизация не подключена.</div>
+  </section>
+  <button type="button" class="btn wide" id="openSettings">⚙ Настройки</button>
+</aside>
+
+<main id="center">
+  <header id="topbar">
+    <button type="button" class="icon-btn" id="menuBtn" aria-label="Меню">☰</button>
+    <div class="nav">
+      <button type="button" class="icon-btn" id="prev" aria-label="Назад">‹</button>
+      <button type="button" class="btn" id="today">Сегодня</button>
+      <button type="button" class="icon-btn" id="next" aria-label="Вперёд">›</button>
+    </div>
+    <h1 id="title"></h1>
+    <span class="mute small" id="weekNo"></span>
+    <div class="grow"></div>
+    <button type="button" class="icon-btn" id="searchBtn" aria-label="Поиск по событиям" title="Поиск (/)">⌕</button>
+    <div class="quick">
+      <label for="quick" class="sr">Быстрый ввод события</label>
+      <input id="quick" type="text" autocomplete="off" placeholder="Быстрый ввод: завтра 15:00 линал">
+      <kbd>Ctrl K</kbd>
+      <div id="quickPop" hidden></div>
+    </div>
+    <div class="seg" role="group" aria-label="Вид" id="seg"></div>
+  </header>
+  <div id="view"></div>
+</main>
+
+<aside id="right">
+  <section id="secDeadlines">
+    <div class="sec-title"><h2>Ближайшие дедлайны</h2><span class="mute small">45 дней</span></div>
+    <div id="deadlines"></div>
+  </section>
+
+  <section id="secTasks">
+    <div class="sec-title"><h2>Задачи</h2><span class="mute small" id="taskCount"></span></div>
+    <form id="taskForm" class="add-row">
+      <label for="taskIn" class="sr">Новая задача</label>
+      <input id="taskIn" type="text" placeholder="Новая задача" autocomplete="off">
+      <label for="taskDue" class="sr">Срок</label>
+      <input id="taskDue" type="date">
+      <button class="btn" type="submit">+</button>
+    </form>
+    <div id="tasks"></div>
+  </section>
+
+  <section id="secHabits">
+    <div class="sec-title"><h2>Привычки</h2><span class="mute small">сегодня</span></div>
+    <form id="habitForm" class="add-row">
+      <label for="habitIn" class="sr">Новая привычка</label>
+      <input id="habitIn" type="text" placeholder="Новая привычка" autocomplete="off">
+      <button class="btn" type="submit">+</button>
+    </form>
+    <div id="habits"></div>
+  </section>
+
+  <section id="secLoad">
+    <div class="sec-title"><h2>Нагрузка недели</h2></div>
+    <div id="load"></div>
+  </section>
+</aside>
+
+<nav id="bottomNav" aria-label="Разделы">
+  <button type="button" data-tab="cal">Календарь</button>
+  <button type="button" data-tab="tasks">Задачи</button>
+  <button type="button" data-tab="habits">Привычки</button>
+  <button type="button" id="navSearch">Поиск</button>
+</nav>
+<button type="button" id="fab" aria-label="Новое событие">+</button>
+</div>
+
+<div id="toasts" aria-live="polite"></div>
+
+<dialog id="evDialog">
+  <form id="evForm" method="dialog">
+    <h2 id="evHeading">Событие</h2>
+    <div id="evRo" class="note" hidden>Это событие повторяется по правилу, которое календарь пока не умеет редактировать. Оно загружено из Google только для просмотра; изменить его можно в самом Google Calendar.</div>
+    <label class="field">Название<input id="evTitle" type="text" required autocomplete="off"></label>
+    <label class="check"><input id="evAllDay" type="checkbox"> Весь день</label>
+    <div class="row3">
+      <label class="field">Дата<input id="evDate" type="date" required></label>
+      <label class="field" id="evStartWrap">Начало<input id="evStart" type="time" required></label>
+      <label class="field" id="evEndWrap">Конец<input id="evEnd" type="time" required></label>
+    </div>
+    <div class="row2">
+      <label class="field">Календарь<select id="evCat"></select></label>
+      <label class="field">Напоминание<select id="evRem"></select></label>
+    </div>
+    <div class="row2">
+      <label class="field">Повтор<select id="evRep"></select></label>
+      <label class="field" id="evUntilWrap">Повторять до (необязательно)<input id="evUntil" type="date"></label>
+    </div>
+    <div id="evDays" class="daysrow" hidden></div>
+    <label class="field">Заметка<textarea id="evNotes" rows="2"></textarea></label>
+    <label class="field">Заметка в Obsidian (путь внутри хранилища)
+      <span class="inline">
+        <input id="evObs" type="text" placeholder="МИЭТ/Сессия/Матан">
+        <button type="button" class="btn" id="evObsOpen">Открыть</button>
+        <button type="button" class="btn" id="evObsNew">Создать</button>
+      </span>
+    </label>
+    <div class="dlg-actions">
+      <button type="button" class="btn danger" id="evDelete">Удалить</button>
+      <span class="grow"></span>
+      <button type="button" class="btn" id="evCancel">Отмена</button>
+      <button type="submit" class="btn primary" id="evSave">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="scopeDialog">
+  <h2 id="scopeHeading">Повторяющееся событие</h2>
+  <div id="scopeList" class="scope-list"></div>
+  <div class="dlg-actions"><span class="grow"></span><button type="button" class="btn" id="scopeCancel">Отмена</button></div>
+</dialog>
+
+<dialog id="searchDialog">
+  <label for="srIn" class="sr">Поиск по событиям</label>
+  <input id="srIn" type="search" placeholder="Поиск по названию и заметкам" autocomplete="off" class="search-in">
+  <div id="srList" class="sr-list"></div>
+  <div class="dlg-actions"><span class="mute small">Esc — закрыть</span><span class="grow"></span><button type="button" class="btn" id="srClose">Закрыть</button></div>
+</dialog>
+
+<dialog id="setDialog" class="wide-dlg">
+  <div id="setBody"></div>
+</dialog>
+
+<input type="file" id="importFile" accept="application/json" hidden>
+
+<script src="parse.js"></script>
+<script src="app.js"></script>
+<script src="notify.js"></script>
+<script src="sync.js"></script>
+</body>
+</html>
