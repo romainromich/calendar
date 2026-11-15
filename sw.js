@@ -1,4 +1,4 @@
-const CACHE = 'calendar-v13';
+const CACHE = 'calendar-v14';
 const FILES = ['./', './index.html', './style.css', './parse.js', './app.js', './notify.js', './sync.js', './push.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', (e) => {

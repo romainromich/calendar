@@ -840,7 +840,8 @@
     $('#evRo').hidden = !ro;
     Array.prototype.forEach.call($('#evForm').querySelectorAll('input,select,textarea'), function (i) { i.disabled = ro; });
     evDlg.showModal();
-    $('#evTitle').focus();
+    /* на телефоне не открываем клавиатуру сразу: название вводится по нажатию */
+    if (!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches)) $('#evTitle').focus();
   }
   function REMOVE_KEEP(list, needKeep) { return needKeep ? list.concat([['keep', 'Как в Google (без изменений)']]) : list; }
 

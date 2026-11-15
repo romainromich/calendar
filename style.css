@@ -552,3 +552,4 @@ dialog[open]{animation:sheetUp .55s cubic-bezier(.22,.8,.24,1)}
   dialog .row2{grid-template-columns:1fr 1fr}
   #evDialog .dlg-actions{position:sticky;bottom:-16px;background:linear-gradient(to bottom,transparent,var(--panel) 36%);padding:18px 0 4px;margin-bottom:-4px}
 }
+#evHeading:focus,#evHeading:focus-visible{outline:0}
