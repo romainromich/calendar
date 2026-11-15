@@ -265,9 +265,23 @@
   function render() {
     applyTheme();
     $('#app').setAttribute('data-view', S.settings.view);
-    renderTop(); renderMini(); renderCats(); renderView(); renderDeadlines(); renderTasks(); renderHabits(); renderLoad();
+    renderTheme(); renderTop(); renderMini(); renderCats(); renderView(); renderDeadlines(); renderTasks(); renderHabits(); renderLoad();
     $('#logo').textContent = new Date().getDate();
   }
+
+  var THEME_PAIR = { night: 'dayMint', dayMint: 'night', amber: 'dayAmber', dayAmber: 'amber', indigo: 'dayIndigo', dayIndigo: 'indigo', lime: 'dayLime', dayLime: 'lime', rose: 'dayRose', dayRose: 'rose' };
+  function presetKey() {
+    var c = S.settings.colors;
+    return Object.keys(PRESETS).filter(function (k) { return PRESETS[k].c.bg === c.bg && PRESETS[k].c.accent === c.accent; })[0] || '';
+  }
+  function renderTheme() {
+    var k = presetKey(), el = $('#themeName');
+    if (el) el.textContent = k ? PRESETS[k].name : 'Своя';
+  }
+  $('#themeToggle').addEventListener('click', function () {
+    var k = presetKey(), to = THEME_PAIR[k] || (lum(S.settings.colors.bg) < 0.25 ? 'dayMint' : 'night');
+    S.settings.colors = Object.assign({}, PRESETS[to].c); save(); render();
+  });
 
   function renderTop() {
     var m = S.settings.view, t;
@@ -1118,6 +1132,17 @@
   /* ---------- мобильная навигация, поиск, клавиши ---------- */
   $('#menuBtn').addEventListener('click', function () { $('#app').classList.toggle('menu'); });
   $('#scrim').addEventListener('click', function () { $('#app').classList.remove('menu'); });
+  $('#sheetSearch').addEventListener('click', function () { $('#app').classList.remove('menu'); openSearch(); });
+  /* шторку можно смахнуть вниз за верхнюю часть */
+  (function () {
+    var y0 = null, head = $('.sheet-head');
+    head.addEventListener('touchstart', function (e) { y0 = e.touches[0].clientY; }, { passive: true });
+    head.addEventListener('touchend', function (e) {
+      if (y0 != null && e.changedTouches[0].clientY - y0 > 50) $('#app').classList.remove('menu');
+      y0 = null;
+    }, { passive: true });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('#app').classList.remove('menu'); });
+  })();
   $('#openSettings').addEventListener('click', function () { $('#app').classList.remove('menu'); });
   Array.prototype.forEach.call(document.querySelectorAll('#bottomNav [data-tab]'), function (b) {
     b.addEventListener('click', function () {

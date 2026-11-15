@@ -14,10 +14,11 @@
 <div id="scrim"></div>
 
 <aside id="side">
+  <div class="sheet-head"><i class="grabber" aria-hidden="true"></i><b>Ещё</b><button type="button" id="sheetSearch" class="btn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg> Поиск</button></div>
   <div class="brand"><div class="logo" id="logo">1</div><div class="brand-name">Календарь</div></div>
   <button type="button" class="btn primary wide" id="newEvent">+ Новое событие</button>
 
-  <section>
+  <section class="mini-sec">
     <div class="mini-head">
       <b id="miniTitle"></b>
       <span>
@@ -28,7 +29,7 @@
     <div id="mini"></div>
   </section>
 
-  <section>
+  <section class="cats-sec">
     <div class="sec-title"><b>Календари</b><span class="mute">фильтр</span></div>
     <div id="cats"></div>
   </section>
@@ -39,7 +40,8 @@
     <div class="g-row"><b>Google Calendar</b></div>
     <div class="mute small">Синхронизация не подключена.</div>
   </section>
-  <button type="button" class="btn wide" id="openSettings">⚙ Настройки</button>
+  <button type="button" class="btn wide" id="themeToggle"><span class="tile-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 019.5 4 8 8 0 1020 14.5z"/></svg></span><b>Тема</b><small id="themeName"></small></button>
+  <button type="button" class="btn wide" id="openSettings"><span class="tile-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg></span><b>Настройки</b><small>вид, уведомления, данные</small></button>
 </aside>
 
 <main id="center">
