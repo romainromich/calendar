@@ -70,27 +70,37 @@
 
   function enable() {
     lastErr = '';
+    var step = 'проверка браузера';
+    function at(name, fn) { return function (x) { step = name; return fn(x); }; }
     if (!supported()) return Promise.reject(new Error('Этот браузер не поддерживает push'));
-    if (!('serviceWorker' in navigator) || location.protocol === 'file:') return Promise.reject(new Error('Откройте приложение по адресу https, а не из файла'));
-    return Notification.requestPermission().then(function (p) {
+    if (location.protocol === 'file:') return Promise.reject(new Error('Откройте приложение по адресу https, а не из файла'));
+    var reg0;
+    return Promise.resolve().then(at('запрос разрешения', function () { return Notification.requestPermission(); })).then(function (p) {
       if (p !== 'granted') throw new Error('Разрешение на уведомления не выдано');
-      return navigator.serviceWorker.ready;
+      step = 'service worker'; return navigator.serviceWorker.ready;
     }).then(function (reg) {
-      return fetch(base() + '/vapid').then(function (r) { if (!r.ok) throw new Error('Сервер недоступен (HTTP ' + r.status + ')'); return r.json(); }).then(function (j) {
-        return reg.pushManager.getSubscription().then(function (old) { return old ? old.unsubscribe() : null; }).then(function () {
-          return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toBytes(j.key) });
-        });
+      reg0 = reg; step = 'ключ сервера (' + base() + '/vapid)';
+      return fetch(base() + '/vapid');
+    }).then(function (r) { if (!r.ok) throw new Error('сервер ответил HTTP ' + r.status); return r.json(); }).then(function (j) {
+      step = 'подписка Chrome на push-сервис Google';
+      return reg0.pushManager.getSubscription().then(function (old) { return old ? old.unsubscribe() : null; }).then(function () {
+        return reg0.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toBytes(j.key) });
       });
     }).then(function (sub) {
+      step = 'регистрация на сервере (/subscribe)';
       return post('/subscribe', { sub: sub.toJSON() });
     }).then(function (r) {
+      step = 'сохранение настроек';
       try { localStorage.setItem(IDK, r.id); } catch (e) { /* не критично */ }
       return caches.open('push-cfg').then(function (c) {
         return c.put(new URL('push-cfg.json', location.href).href, new Response(JSON.stringify({ url: base(), id: r.id })));
       });
     }).then(function () {
       S().settings.pushOn = true; C.save(); lastHash = '';
+      step = 'отправка расписания (/schedule)';
       return sync(true);
+    }).catch(function (e) {
+      throw new Error('Шаг «' + step + '»: ' + (e && e.name ? e.name + ': ' : '') + (e && e.message || e));
     });
   }
   function disable() {
