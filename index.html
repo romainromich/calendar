@@ -6,7 +6,7 @@
 <title>Календарь</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<meta name="theme-color" content="#3B5BDB">
+<meta name="theme-color" content="#08090C">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -100,12 +100,13 @@
 </aside>
 
 <nav id="bottomNav" aria-label="Разделы">
-  <button type="button" data-tab="cal">Календарь</button>
-  <button type="button" data-tab="tasks">Задачи</button>
-  <button type="button" data-tab="habits">Привычки</button>
-  <button type="button" id="navSearch">Поиск</button>
+  <button type="button" data-tab="cal" data-view="day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span>День</span></button>
+  <button type="button" data-tab="cal" data-view="week"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10h18M6 5v5M10 5v5M14 5v5M18 5v5M4 10v9h16v-9"/></svg><span>Неделя</span></button>
+  <button type="button" data-tab="cal" data-view="month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M4 9h16M4 14h16M9 4v16M15 4v16"/></svg><span>Месяц</span></button>
+  <button type="button" data-tab="tasks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg><span>Задачи</span></button>
+  <button type="button" data-tab="habits"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3l3 3-3 3M20 6H8a4 4 0 00-4 4M7 21l-3-3 3-3M4 18h12a4 4 0 004-4"/></svg><span>Привычки</span></button>
 </nav>
-<button type="button" id="fab" aria-label="Новое событие">+</button>
+<button type="button" id="fab" aria-label="Новое событие"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
 </div>
 
 <div id="toasts" aria-live="polite"></div>
@@ -130,7 +131,7 @@
       <label class="field" id="evUntilWrap">Повторять до (необязательно)<input id="evUntil" type="date"></label>
     </div>
     <div id="evDays" class="daysrow" hidden></div>
-    <label class="field">Заметка<textarea id="evNotes" rows="2"></textarea></label>
+    <label class="field">Доп. информация / заметка<textarea id="evNotes" rows="2" placeholder="Что важно знать к этому событию"></textarea></label>
     <label class="field">Заметка в Obsidian (путь внутри хранилища)
       <span class="inline">
         <input id="evObs" type="text" placeholder="МИЭТ/Сессия/Матан">
