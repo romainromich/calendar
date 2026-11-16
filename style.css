@@ -570,3 +570,11 @@ dialog[open]{animation:sheetUp .55s cubic-bezier(.22,.8,.24,1)}
   #evDialog .dlg-actions .grow{flex:0 0 0;display:block}
   #evDialog .dlg-actions .btn{flex:1 1 auto;justify-content:center}
 }
+
+/* стрелка выхода в окне события (телефон) */
+#evBack{display:none}
+@media(max-width:760px){
+  #evDialog .dlg-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  #evDialog .dlg-head h2{margin:0;flex:1}
+  #evBack{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 40px;border-radius:50%;border:1px solid var(--line);background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--ink);padding:0;margin-left:-4px}
+}

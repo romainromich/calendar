@@ -872,6 +872,7 @@
     if (!editing || !window.CalPrep) return;
     var occ = editing; evDlg.close(); window.CalPrep.open(occ);
   });
+  $('#evBack').addEventListener('click', function () { evDlg.close(); });
   $('#evCancel').addEventListener('click', function () { evDlg.close(); });
   $('#evDelete').addEventListener('click', function () {
     if (!editing) return;

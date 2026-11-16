@@ -115,7 +115,10 @@
 
 <dialog id="evDialog">
   <form id="evForm" method="dialog">
-    <h2 id="evHeading" tabindex="-1" autofocus>Событие</h2>
+    <div class="dlg-head">
+      <button type="button" id="evBack" aria-label="Закрыть без сохранения"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2 id="evHeading" tabindex="-1" autofocus>Событие</h2>
+    </div>
     <div id="evRo" class="note" hidden>Это событие повторяется по правилу, которое календарь пока не умеет редактировать. Оно загружено из Google только для просмотра; изменить его можно в самом Google Calendar.</div>
     <label class="field">Название<input id="evTitle" type="text" required autocomplete="off"></label>
     <label class="check"><input id="evAllDay" type="checkbox"> Весь день</label>
