@@ -836,6 +836,7 @@
     Array.prototype.forEach.call($('#evDays').querySelectorAll('input'), function (i) { i.checked = days.indexOf(i.value) >= 0; });
     syncRep();
     $('#evDelete').style.display = ev && !ro ? '' : 'none';
+    $('#evPrep').style.display = ev && !ro && !ev._m.prepFor && isKey(ev) && ev.date >= ymd(new Date()) && window.CalPrep ? '' : 'none';
     $('#evSave').style.display = ro ? 'none' : '';
     $('#evRo').hidden = !ro;
     Array.prototype.forEach.call($('#evForm').querySelectorAll('input,select,textarea'), function (i) { i.disabled = ro; });
@@ -867,6 +868,10 @@
     go(obsUri('new', { file: file, content: content }));
   });
 
+  $('#evPrep').addEventListener('click', function () {
+    if (!editing || !window.CalPrep) return;
+    var occ = editing; evDlg.close(); window.CalPrep.open(occ);
+  });
   $('#evCancel').addEventListener('click', function () { evDlg.close(); });
   $('#evDelete').addEventListener('click', function () {
     if (!editing) return;
@@ -1192,7 +1197,7 @@
     save: save, render: render, uid: uid, ymd: ymd, parseYmd: parseYmd, shiftDate: shiftDate, dayDiff: dayDiff, addDays: addDays,
     occursOn: occursOn, eventsOn: eventsOn, catById: catById, hm: hm, toast: toast, mark: mark, normRep: normRep, remMinutes: remMinutes,
     isKey: isKey, hooks: hooks, extra: extra, DOW_SHORT: DOW_SHORT, MON_GEN: MON_GEN, MON_SHORT: MON_SHORT, setAnchor: setAnchor,
-    openSettings: function () { buildSettings(); if (!setDlg.open) setDlg.showModal(); }, h: h, dropMaster: dropMaster
+    openSettings: function () { buildSettings(); if (!setDlg.open) setDlg.showModal(); }, h: h, dropMaster: dropMaster, editing: function () { return editing; }
   };
 
   /* ---------- запуск ---------- */

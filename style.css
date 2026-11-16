@@ -554,3 +554,8 @@ dialog[open]{animation:sheetUp .55s cubic-bezier(.22,.8,.24,1)}
   #evDialog .dlg-actions{position:sticky;bottom:-16px;background:linear-gradient(to bottom,transparent,var(--panel) 36%);padding:18px 0 4px;margin-bottom:-4px}
 }
 #evHeading:focus,#evHeading:focus-visible{outline:0}
+
+/* подготовка к событиям */
+.plancard{border:1px solid var(--line)}
+.plancard.on,.plancard.on:hover{background:color-mix(in srgb,var(--accent) 16%,transparent);border-color:var(--accent);color:var(--ink)}
+.plancard.on .mute{color:var(--ink);opacity:.8}
