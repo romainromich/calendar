@@ -12,7 +12,42 @@
     study: /пара|лекци|лаб|матан|линал|физик|англ|коллок|экзамен|семинар|учёб|учеб|курсов|презент/i
   };
 
-  function parseQuick(text, now, cats, defaultCat) {
+
+  /* голосовой ввод: «в три тридцать», «в 7 вечера», «в 3» (час 1–7 без уточнения считаем дневным) */
+  var HOURW = { 'двадцать три': 23, 'двадцать два': 22, 'двадцать один': 21, 'двадцать': 20, 'девятнадцать': 19, 'восемнадцать': 18, 'семнадцать': 17,
+    'шестнадцать': 16, 'пятнадцать': 15, 'четырнадцать': 14, 'тринадцать': 13, 'двенадцать': 12, 'одиннадцать': 11, 'десять': 10, 'девять': 9,
+    'восемь': 8, 'семь': 7, 'шесть': 6, 'пять': 5, 'четыре': 4, 'три': 3, 'два': 2, 'один': 1, 'час': 1 };
+  var MINW = { 'пятьдесят пять': 55, 'пятьдесят': 50, 'сорок пять': 45, 'сорок': 40, 'тридцать пять': 35, 'тридцать': 30, 'двадцать пять': 25,
+    'двадцать': 20, 'пятнадцать': 15, 'десять': 10, 'ноль пять': 5, 'ноль ноль': 0 };
+  function alt(map) { return Object.keys(map).sort(function (a, b) { return b.length - a.length; }).join('|'); }
+  function normalizeSpoken(text) {
+    var t = String(text || '');
+    // «в три тридцать» -> «в 3:30»
+    t = t.replace(new RegExp(L + '(в|к|с|до)\\s+(' + alt(HOURW) + ')(?:\\s+(?:часов|часа|час))?(?:\\s+(' + alt(MINW) + '))?' + R, 'giu'), function (m, p, hw, mw) {
+      var h = HOURW[hw.toLowerCase()], mm = mw ? MINW[mw.toLowerCase()] : null;
+      return p + ' ' + h + (mm !== null && mm !== undefined ? ':' + pad(mm) : '');
+    });
+    // «в 15 00» -> «в 15:00»
+    t = t.replace(new RegExp(L + '(в|к|с)\\s+(\\d{1,2})\\s+(\\d{2})' + R, 'giu'), function (m, p, h, mm) {
+      return +h <= 23 && +mm <= 59 ? p + ' ' + h + ':' + mm : m;
+    });
+    // утро/день/вечер/ночь и час 1–7 без уточнения
+    var re = new RegExp(L + '(в|к|с|до)\\s+(\\d{1,2})(?::(\\d{2}))?(?:\\s*(?:часов|часа|час)(?![\\p{L}]))?(?:\\s+(утра|дня|вечера|ночи))?(?![\\p{L}\\d:.])(?!\\s+(?:' + MONTHS.join('|') + '))', 'giu');
+    t = t.replace(re, function (m, p, hs, mm, q) {
+      var h = +hs;
+      if (h > 23) return m;
+      q = q ? q.toLowerCase() : '';
+      if (q === 'утра') h = h === 12 ? 0 : h;
+      else if (q === 'дня' || q === 'вечера') h = h < 12 ? h + 12 : h;
+      else if (q === 'ночи') h = h === 12 ? 0 : h;
+      else if (h >= 1 && h <= 7) h += 12;
+      return p + ' ' + h + ':' + (mm || '00');
+    });
+    return t;
+  }
+
+  function parseQuick(text, now, cats, defaultCat, opts) {
+    if (opts && opts.spoken) text = normalizeSpoken(text);
     var s = ' ' + text + ' ';
     var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     var res = { date: ymd(today), start: 9 * 60, end: null, cat: defaultCat || (cats[0] && cats[0].id), hasDate: false, hasTime: false };
@@ -112,7 +147,7 @@
     return res;
   }
 
-  var api = { parseQuick: parseQuick, ymd: ymd, addDays: addDays, pad: pad };
+  var api = { parseQuick: parseQuick, normalizeSpoken: normalizeSpoken, ymd: ymd, addDays: addDays, pad: pad };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CalParse = api;
 })(typeof window !== 'undefined' ? window : this);

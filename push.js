@@ -39,6 +39,14 @@
     for (var i = 0; i <= 2; i++) {
       var key = C.ymd(C.addDays(base0, i));
       C.eventsOn(key, true).forEach(function (e) {
+        if (e.travel && !e.allDay) {
+          var dd = C.parseYmd(key), st = new Date(dd.getFullYear(), dd.getMonth(), dd.getDate(), Math.floor(e.start / 60), e.start % 60).getTime();
+          var lat = st - (e.travel + C.leaveBuf()) * 60000;
+          if (lat >= now - 10 * 60000 && st > now) {
+            items.push({ k: e._m.id + '|' + key + '|leave|' + e.travel, at: lat, title: 'Пора выходить',
+              body: e.title + ' в ' + C.hm(e.start) + ' · дорога ' + e.travel + ' мин · выйти в ' + C.hm(e.start - e.travel) });
+          }
+        }
         var rem = C.remMinutes(e);
         if (rem === null) return;
         if (e.allDay && typeof e.rem !== 'number') return;

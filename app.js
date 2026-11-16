@@ -229,6 +229,8 @@
     });
     return out.sort(function (a, b) { return (b.allDay ? 1 : 0) - (a.allDay ? 1 : 0) || a.start - b.start || a.end - b.end; });
   }
+  var TRAVELS = [[0, 'Не нужна'], [5, '5 мин'], [10, '10 мин'], [15, '15 мин'], [20, '20 мин'], [30, '30 мин'], [45, '45 мин'], [60, '1 ч'], [90, '1,5 ч']];
+  function leaveBuf() { return typeof S.settings.leaveBuf === 'number' ? S.settings.leaveBuf : 5; }
   function nowMin() { var n = new Date(); return n.getHours() * 60 + n.getMinutes(); }
   function remMinutes(e) {
     if (e.rem === null) return null;
@@ -441,7 +443,13 @@
     var evs = eventsOn(key), ad = evs.filter(function (e) { return e.allDay; }), timed = evs.filter(function (e) { return !e.allDay; });
     var tl = h('div', { class: 'tl' });
     var upcomingMarked = false;
-    function noteOf(e) { var n = firstLine(e.notes); return n ? h('div', { class: 'tl-note' }, n) : null; }
+    function noteOf(e) {
+      var n = firstLine(e.notes), bits = [];
+      if (e.place) bits.push(e.place);
+      if (e.travel && !e.allDay) bits.push('дорога ' + fmtDur(e.travel) + ', выйти в ' + hm(Math.max(0, e.start - e.travel)));
+      if (!n && !bits.length) return null;
+      return h('div', null, bits.length ? h('div', { class: 'tl-note' }, bits.join(' · ')) : null, n ? h('div', { class: 'tl-note' }, n) : null);
+    }
     function badges(e) { return (e._m.rep ? ' ↻' : '') + (e.obs ? ' ↗' : ''); }
     timed.forEach(function (e, i) {
       var cat = catById(e.cat), state = isPast ? 'past' : isToday ? (e.end <= nm ? 'past' : e.start <= nm ? 'now' : 'next') : 'next';
@@ -849,6 +857,8 @@
     sel.value = catById(d.cat).id;
     $('#evRem').value = remToValue(d.rem);
     $('#evNotes').value = d.notes || '';
+    $('#evPlace').value = d.place || '';
+    var tsel = $('#evTravel'); tsel.value = String(TRAVELS.some(function (t) { return t[0] === d.travel; }) ? d.travel : 0);
     $('#evObs').value = d.obs || '';
     var preset = repPreset(rep);
     var rs = $('#evRep');
@@ -876,6 +886,14 @@
     return 'obsidian://' + action + '?' + q.join('&');
   }
   function go(uri) { var a = h('a', { href: uri }); document.body.append(a); a.click(); a.remove(); }
+  (function () {
+    var sel = $('#evTravel');
+    sel.replaceChildren.apply(sel, TRAVELS.map(function (t) { return h('option', { value: String(t[0]) }, t[1]); }));
+    $('#evPlace').addEventListener('change', function () {
+      var k = $('#evPlace').value.trim().toLowerCase(), known = S.settings.places && S.settings.places[k];
+      if (known && !+sel.value) sel.value = String(known);
+    });
+  })();
   $('#evObsOpen').addEventListener('click', function () {
     var v = $('#evObs').value.trim();
     if (v) go(obsUri('open', { file: v }));
@@ -916,7 +934,9 @@
       rep = presetRep(pv, checked, $('#evUntil').value);
     }
     var data = { title: $('#evTitle').value.trim() || 'Событие', date: $('#evDate').value, start: s0, end: en, cat: $('#evCat').value, notes: $('#evNotes').value,
-      allDay: allDay || undefined, rem: valueToRem($('#evRem').value), obs: $('#evObs').value.trim() || undefined };
+      allDay: allDay || undefined, rem: valueToRem($('#evRem').value), obs: $('#evObs').value.trim() || undefined,
+      place: $('#evPlace').value.trim() || undefined, travel: (!allDay && +$('#evTravel').value) || undefined };
+    if (data.place && data.travel) { (S.settings.places || (S.settings.places = {}))[data.place.toLowerCase()] = data.travel; }
     if (!allDay) data.days = undefined; else if (editing && editing._m.days) data.days = editing._m.days;
     var occ = editing;
     evDlg.close();
@@ -1221,7 +1241,7 @@
     save: save, render: render, uid: uid, ymd: ymd, parseYmd: parseYmd, shiftDate: shiftDate, dayDiff: dayDiff, addDays: addDays,
     occursOn: occursOn, eventsOn: eventsOn, catById: catById, hm: hm, toast: toast, mark: mark, normRep: normRep, remMinutes: remMinutes,
     isKey: isKey, hooks: hooks, extra: extra, DOW_SHORT: DOW_SHORT, MON_GEN: MON_GEN, MON_SHORT: MON_SHORT, setAnchor: setAnchor,
-    openSettings: function () { buildSettings(); if (!setDlg.open) setDlg.showModal(); }, h: h, dropMaster: dropMaster, editing: function () { return editing; }
+    openSettings: function () { buildSettings(); if (!setDlg.open) setDlg.showModal(); }, h: h, dropMaster: dropMaster, editing: function () { return editing; }, openEvent: openEvent, leaveBuf: leaveBuf
   };
 
   /* клик по затемнённому фону закрывает окно (на ПК; как Escape) */

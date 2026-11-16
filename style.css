@@ -591,3 +591,11 @@ dialog[open]{animation:sheetUp .55s cubic-bezier(.22,.8,.24,1)}
 #right .add-row input[type=text]{flex:1 1 60%;min-width:0}
 #right .add-row input[type=date],.add-row input[type=date]{order:3;flex:1 1 44%;min-width:0}
 #right .add-row #taskDur,.add-row #taskDur{order:3;flex:1 1 40%;min-width:0}
+
+/* голосовой ввод */
+.quick.hasmic input{padding-right:46px}
+.quick .mic{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:var(--mute);display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.quick .mic:hover{color:var(--ink);background:var(--hover)}
+.quick .mic.on{background:var(--accent);color:var(--onaccent);animation:micPulse 1.2s ease-in-out infinite}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 50%,transparent)}50%{box-shadow:0 0 0 8px transparent}}
+@media(max-width:760px){.quick .mic{width:36px;height:36px;right:5px}}

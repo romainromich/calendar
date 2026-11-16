@@ -30,6 +30,14 @@
     for (var i = 0; i <= 2; i++) {
       var key = C.ymd(C.addDays(base, i));
       C.eventsOn(key, true).forEach(function (e) {
+        if (e.travel && !e.allDay) {                       // «пора выходить»: старт минус дорога минус запас на сборы
+          var dd = C.parseYmd(key), st = new Date(dd.getFullYear(), dd.getMonth(), dd.getDate(), Math.floor(e.start / 60), e.start % 60).getTime();
+          var trig = st - (e.travel + C.leaveBuf()) * 60000, lk = e._m.id + '|' + key + '|leave|' + e.travel;
+          if (nowTs >= trig && nowTs < st && !fired[lk]) {
+            fired[lk] = nowTs; changed = true;
+            show('Пора выходить', e.title + ' в ' + C.hm(e.start) + ' · дорога ' + e.travel + ' мин · выйти в ' + C.hm(e.start - e.travel));
+          }
+        }
         var rem = C.remMinutes(e);
         if (rem === null) return;
         if (e.allDay && typeof e.rem !== 'number') return; // для событий «весь день» только явное напоминание
@@ -68,6 +76,10 @@
       [['none', 'Не напоминать'], ['0', 'В момент начала'], ['5', 'За 5 минут'], ['10', 'За 10 минут'], ['15', 'За 15 минут'], ['30', 'За 30 минут'], ['60', 'За 1 час']]
         .map(function (r) { return h('option', { value: r[0] }, r[1]); }));
     sel.value = S.settings.remDefault === null ? 'none' : String(S.settings.remDefault);
+    var lsel = h('select', { onchange: function () { S.settings.leaveBuf = +lsel.value; C.save(); } },
+      [['0', 'Ровно в момент выхода'], ['5', 'За 5 минут до выхода'], ['10', 'За 10 минут до выхода'], ['15', 'За 15 минут до выхода']]
+        .map(function (r) { return h('option', { value: r[0] }, r[1]); }));
+    lsel.value = String(C.leaveBuf());
     var chk = h('input', { type: 'checkbox', checked: !!S.settings.notify, onchange: function () {
       S.settings.notify = chk.checked; C.save();
       if (chk.checked && 'Notification' in window && Notification.permission === 'default') {
@@ -76,7 +88,7 @@
     } });
     return h('div', { class: 'set-sec' }, h('h3', null, 'Напоминания'),
       h('p', { class: 'mute small', style: 'margin-top:0' }, 'Напоминания приходят, пока календарь открыт в браузере или установлен как приложение и запущен. Закрытое приложение ничего показать не может.'),
-      h('div', { class: 'opts' }, h('label', null, 'Напоминание по умолчанию', sel)),
+      h('div', { class: 'opts' }, h('label', null, 'Напоминание по умолчанию', sel), h('label', null, '«Пора выходить» (если у события указана дорога)', lsel)),
       h('label', { class: 'check', style: 'margin-top:10px' }, chk, 'Показывать системные уведомления Windows'),
       h('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' }, perm,
         h('button', { type: 'button', class: 'btn', onclick: function () { show('Проверка', 'Так будут выглядеть напоминания.'); } }, 'Показать пример')));
