@@ -649,3 +649,7 @@ dialog[open]{animation:sheetUp .55s cubic-bezier(.22,.8,.24,1)}
 #offlinePill[hidden]{display:none}
 #offlinePill i{width:8px;height:8px;border-radius:50%;background:#F59E0B}
 @media(min-width:761px){#offlinePill{bottom:18px}}
+#offlinePill{bottom:calc(96px + env(safe-area-inset-bottom));background:color-mix(in srgb,var(--bg) 94%,transparent);isolation:isolate}
+#offlinePill::before{content:"";position:absolute;inset:-26px -48px;z-index:-1;border-radius:50%;background:radial-gradient(ellipse at center,rgba(0,0,0,.7) 0%,rgba(0,0,0,.45) 45%,transparent 75%);pointer-events:none}
+.offline #toasts{bottom:150px}
+@media(min-width:761px){#offlinePill{bottom:18px}.offline #toasts{bottom:70px}}
