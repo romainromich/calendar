@@ -653,3 +653,13 @@ dialog[open]{animation:sheetUp .55s cubic-bezier(.22,.8,.24,1)}
 #offlinePill::before{content:"";position:absolute;inset:-26px -48px;z-index:-1;border-radius:50%;background:radial-gradient(ellipse at center,rgba(0,0,0,.7) 0%,rgba(0,0,0,.45) 45%,transparent 75%);pointer-events:none}
 .offline #toasts{bottom:150px}
 @media(min-width:761px){#offlinePill{bottom:18px}.offline #toasts{bottom:70px}}
+
+/* барабан дня */
+.tl>.tl-row{transform-origin:left center;will-change:transform,opacity}
+#fadeTop,#fadeBot{display:none;position:fixed;left:0;right:0;pointer-events:none;z-index:14}
+@media(max-width:760px){
+  .drum #fadeTop,.drum #fadeBot{display:block}
+  #fadeTop{top:0;height:56px;background:linear-gradient(var(--bg),transparent)}
+  #fadeBot{bottom:0;height:150px;background:linear-gradient(transparent,var(--bg) 80%)}
+  #app:not([data-view=day]) ~ #fadeTop,#app:not([data-view=day]) ~ #fadeBot{display:none}
+}
