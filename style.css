@@ -671,7 +671,7 @@ dialog[open]{animation:sheetUp .55s cubic-bezier(.22,.8,.24,1)}
 @media(max-width:760px){#topbar,#app[data-view=day] #topbar{position:relative;z-index:15}}
 
 /* заставка запуска: плашки выезжают, цвета берутся из темы */
-#splash{--sa:#5EEAD4;--sb:#A78BFA;position:fixed;inset:0;z-index:1000;background:#0E1116;display:flex;align-items:center;justify-content:center;transition:opacity .4s ease}
+#splash{--sa:#5EEAD4;--sb:#A78BFA;--sbg:#0E1116;position:fixed;inset:0;z-index:1000;background:var(--sbg);display:flex;align-items:center;justify-content:center;transition:opacity .4s ease}
 #splash.out{opacity:0;pointer-events:none}
 #splash .sp-ic{position:relative;width:min(46vw,200px);aspect-ratio:1;font-size:min(46vw,200px)}
 #splash i{position:absolute;display:block;font-style:normal}
