@@ -469,13 +469,12 @@
       if (nx && nx.start - e.end >= 15) {
         var gapPast = isPast || (isToday && nx.start <= nm);
         if (!gapPast) {
-          var gap = nx.start - e.end, tasks = S.tasks.filter(function (t) { return !t.done; }).sort(function (a, b) { return String(a.due || '9').localeCompare(String(b.due || '9')); });
-          var t0 = tasks[0];
+          var gap = nx.start - e.end, t0 = taskForWindow(gap);
           tl.append(h('div', { class: 'tl-row win' }, h('span', { class: 'dot', 'aria-hidden': 'true' }),
             h('div', { class: 'tl-win' },
               h('div', { class: 'win-h' }, 'Окно ' + fmtDur(gap), h('span', { class: 'sub' }, hm(e.end) + '–' + hm(nx.start))),
               t0 ? h('button', { type: 'button', class: 'win-task', onclick: function () { t0.done = true; save(); render(); } },
-                h('span', { class: 'ck', 'aria-hidden': 'true' }, '○'), h('span', null, h('b', null, 'Успеть: '), t0.title)) : null)));
+                h('span', { class: 'ck', 'aria-hidden': 'true' }, '○'), h('span', null, h('b', null, 'Успеть: '), t0.title + (t0.dur ? ' · ' + durLabel(t0.dur) : ''))) : null)));
         }
       }
     });
@@ -536,6 +535,18 @@
     return h('button', { type: 'button', class: 'chk' + (round ? ' round' : '') + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false', 'aria-label': label, onclick: fn }, on ? '✓' : '');
   }
 
+  var TASK_DURS = [[0, 'Без времени'], [15, '15 мин'], [30, '30 мин'], [45, '45 мин'], [60, '1 ч'], [90, '1,5 ч'], [120, '2 ч'], [180, '3 ч']];
+  function durOptions(sel, cur) {
+    sel.replaceChildren.apply(sel, TASK_DURS.map(function (d) { return h('option', { value: String(d[0]) }, d[1]); }));
+    sel.value = String(TASK_DURS.some(function (d) { return d[0] === cur; }) ? cur : 0);
+  }
+  function durLabel(m) { var d = TASK_DURS.filter(function (x) { return x[0] === m; })[0]; return d ? d[1] : fmtDur(m); }
+  /* задача для окна: по сроку; если время указано, она должна поместиться, из подходящих берём самую крупную */
+  function taskForWindow(gap) {
+    var open = S.tasks.filter(function (t) { return !t.done && (!t.dur || t.dur <= gap); });
+    open.sort(function (a, b) { return String(a.due || '9').localeCompare(String(b.due || '9')) || (b.dur || 0) - (a.dur || 0); });
+    return open[0] || null;
+  }
   function renderTasks() {
     var root = $('#tasks'), td = ymd(today());
     var list = S.tasks.slice().sort(function (a, b) { return (a.done - b.done) || String(a.due || '9').localeCompare(String(b.due || '9')); });
@@ -546,7 +557,13 @@
       if (t.due) { var d = parseYmd(t.due); due = DOW_SHORT[d.getDay()] + ' ' + d.getDate() + ' ' + MON_SHORT[d.getMonth()] + (!t.done && t.due < td ? ' · просрочено' : ''); }
       return h('div', { class: 'item' },
         checkBtn(t.done, 'Выполнено: ' + t.title, false, function () { t.done = !t.done; save(); renderTasks(); }),
-        h('div', { class: 'body' }, h('div', { class: 't' + (t.done ? ' done' : '') }, t.title), due && h('div', { class: 'mute small' }, due)),
+        h('div', { class: 'body' }, h('div', { class: 't' + (t.done ? ' done' : '') }, t.title),
+          h('div', { class: 'mute small tmeta' }, due ? due + ' · ' : '', (function () {
+            var sel = h('select', { class: 'durchip', 'aria-label': 'Сколько времени займёт: ' + t.title, onchange: function () { t.dur = +sel.value || undefined; save(); renderTasks(); render(); } });
+            durOptions(sel, t.dur || 0);
+            if (!t.dur) sel.options[0].textContent = '+ время';
+            return sel;
+          })())),
         h('button', { type: 'button', class: 'x', 'aria-label': 'Удалить задачу', onclick: function () { S.tasks = S.tasks.filter(function (x) { return x !== t; }); save(); renderTasks(); } }, '✕'));
     }));
   }
@@ -976,8 +993,8 @@
     e.preventDefault();
     var t = $('#taskIn').value.trim();
     if (!t) return;
-    S.tasks.push({ id: uid(), title: t, due: $('#taskDue').value || '', done: false });
-    $('#taskIn').value = ''; $('#taskDue').value = ''; save(); renderTasks();
+    S.tasks.push({ id: uid(), title: t, due: $('#taskDue').value || '', done: false, dur: +$('#taskDur').value || undefined });
+    $('#taskIn').value = ''; $('#taskDue').value = ''; $('#taskDur').value = '0'; save(); render();
   });
   $('#habitForm').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -1224,6 +1241,7 @@
   });
 
   /* ---------- запуск ---------- */
+  durOptions($('#taskDur'), 0);
   seed();
   render();
   setInterval(function () { if (!dragging) renderView(); }, 60000);

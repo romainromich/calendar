@@ -579,3 +579,15 @@ dialog[open]{animation:sheetUp .55s cubic-bezier(.22,.8,.24,1)}
   #evBack{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 40px;border-radius:50%;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 70%,transparent);color:var(--ink);padding:0;margin-right:-2px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   #evBack:active{background:var(--hover)}
 }
+
+/* длительность задач */
+.add-row input[type=date]{flex:1 1 52%}
+.add-row #taskDur{order:3;flex:1 1 38%;min-width:0}
+.tmeta{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.durchip{appearance:none;-webkit-appearance:none;height:22px;padding:0 10px;border-radius:11px;border:1px solid var(--line);background:transparent;color:var(--mute);font:inherit;font-size:12px;cursor:pointer}
+.durchip:hover,.durchip:focus-visible{color:var(--ink);border-color:var(--accent)}
+@media(max-width:760px){ .durchip{height:26px;border-radius:13px;font-size:12.5px} }
+.add-row input[type=text]{flex:1 1 60%}
+#right .add-row input[type=text]{flex:1 1 60%;min-width:0}
+#right .add-row input[type=date],.add-row input[type=date]{order:3;flex:1 1 44%;min-width:0}
+#right .add-row #taskDur,.add-row #taskDur{order:3;flex:1 1 40%;min-width:0}
