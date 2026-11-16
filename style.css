@@ -668,3 +668,4 @@ dialog[open]{animation:sheetUp .55s cubic-bezier(.22,.8,.24,1)}
 #app[data-view=day] #view{padding-bottom:50vh}
 @media(max-width:760px){#bottomNav{z-index:18}#fab{z-index:19}#fadeTop,#fadeBot{z-index:14}}
 @media(max-width:760px){.strip2{z-index:15}}
+@media(max-width:760px){#topbar,#app[data-view=day] #topbar{position:relative;z-index:15}}
