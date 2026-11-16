@@ -1200,6 +1200,22 @@
     openSettings: function () { buildSettings(); if (!setDlg.open) setDlg.showModal(); }, h: h, dropMaster: dropMaster, editing: function () { return editing; }
   };
 
+  /* клик по затемнённому фону закрывает окно (на ПК; как Escape) */
+  var downOnBackdrop = null;
+  function onBackdrop(e) {
+    var d = e.target;
+    if (!d || d.tagName !== 'DIALOG' || !d.open) return false;
+    var r = d.getBoundingClientRect();
+    return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+  }
+  document.addEventListener('mousedown', function (e) { downOnBackdrop = onBackdrop(e) ? e.target : null; });
+  document.addEventListener('click', function (e) {
+    var d = downOnBackdrop; downOnBackdrop = null;
+    if (!d || e.target !== d || !onBackdrop(e)) return;
+    if (window.matchMedia && window.matchMedia('(pointer:coarse)').matches) return;
+    if (d.dispatchEvent(new Event('cancel', { cancelable: true }))) d.close();
+  });
+
   /* ---------- запуск ---------- */
   seed();
   render();
