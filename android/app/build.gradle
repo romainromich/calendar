@@ -1,0 +1,41 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'io.github.romainromich.calendar'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'io.github.romainromich.calendar'
+        minSdk 26
+        targetSdk 34
+        versionCode((project.findProperty('vc') ?: '1').toString().toInteger())
+        versionName '1.0'
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('../release.keystore')
+            storePassword 'calendar-app'
+            keyAlias 'calendar'
+            keyPassword 'calendar-app'
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+}

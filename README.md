@@ -94,3 +94,8 @@
 
 ### Заставка запуска
 При открытии приложения на ~1,7 с показывается заставка «Барабан»: три плашки выезжают и встают на место, на центральной день недели и сегодняшнее число. Цвета и фон берутся из выбранной темы (в светлых темах заставка тоже светлая). Показывается один раз за сессию, нажатие пропускает. В `manifest.webmanifest` фон системной заставки Android тоже тёмный (#0E1116). Код: блок `#splash` в index.html и стили в конце style.css.
+
+### Приложение для Android (APK)
+Папка `android/` содержит оболочку-«Chrome-версию» (Trusted Web Activity): свой значок, заставка, открывается сайт `https://romainromich.github.io/calendar/`. Всё, что работает в Chrome (вход в Google, push, голос, офлайн), работает и тут. APK собирает GitHub Actions (`.github/workflows/android.yml`) при каждом изменении папки `android/` и кладёт в релиз `apk-latest`.
+Скачать: https://github.com/romainromich/calendar/releases/download/apk-latest/calendar.apk
+Ключ подписи (`android/release.keystore`, пароль `calendar-app`) лежит в репозитории: это личное приложение для установки вручную, не для Play Маркета. Без файла `https://romainromich.github.io/.well-known/assetlinks.json` (нужен отдельный репозиторий `romainromich.github.io`) вверху приложения виден адресный бар Chrome.
