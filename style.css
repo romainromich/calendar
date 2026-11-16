@@ -599,3 +599,34 @@ dialog[open]{animation:sheetUp .55s cubic-bezier(.22,.8,.24,1)}
 .quick .mic.on{background:var(--accent);color:var(--onaccent);animation:micPulse 1.2s ease-in-out infinite}
 @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 50%,transparent)}50%{box-shadow:0 0 0 8px transparent}}
 @media(max-width:760px){.quick .mic{width:36px;height:36px;right:5px}}
+
+/* привычки в линии дня */
+.tl-hab{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid var(--line);border-radius:16px;background:color-mix(in srgb,var(--panel) 55%,transparent);color:var(--ink);padding:9px 12px;font:inherit;cursor:pointer}
+.tl-hab:disabled{opacity:.6;cursor:default}
+.tl-hab .ck{width:22px;height:22px;flex:0 0 22px;border-radius:50%;border:2px solid var(--mute);display:inline-flex;align-items:center;justify-content:center;font-size:13px;line-height:1;color:var(--onaccent)}
+.tl-hab.on .ck{background:var(--accent);border-color:var(--accent)}
+.tl-hab .tm{font-weight:700;font-variant-numeric:tabular-nums}
+.tl-hab .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tl-hab.on{opacity:.65}.tl-hab.on .t{text-decoration:line-through}
+.tl-hab.late .ck{border-color:var(--accent)}
+.tl-row.hab .dot{width:10px;height:10px;opacity:.6}
+.hab-at{width:78px;padding:0 6px}
+#habitForm input[type=time]{flex:0 0 96px;min-width:0}
+
+/* итоги недели */
+#reviewDialog .dlg-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+#reviewDialog .dlg-head h2{margin:0;flex:1}
+.dlg-x{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 70%,transparent);color:var(--ink);padding:0;cursor:pointer;font:inherit}
+#reviewDialog h3{margin:16px 0 6px;font-size:1rem}
+.rv-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rv-tile{border:1px solid var(--line);border-radius:16px;padding:10px 8px;text-align:center;background:color-mix(in srgb,var(--panel) 55%,transparent)}
+.rv-tile b{display:block;font-size:1.6rem;line-height:1.1;color:var(--accent)}
+.rv-tile span{display:block;font-size:.78rem;color:var(--mute);margin-top:2px}
+.rv-warn{margin:10px 0 0;padding:8px 12px;border-radius:12px;border:1px solid color-mix(in srgb,var(--danger,#e5484d) 55%,transparent);font-size:.9rem}
+.rv-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+.rv-row .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rv-dots{display:inline-flex;gap:4px}
+.rv-dots i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--mute)}
+.rv-dots i.on{background:var(--accent);border-color:var(--accent)}
+.linkbtn{border:0;background:transparent;color:var(--accent);font:inherit;font-size:.85rem;padding:6px 0;cursor:pointer;text-align:left}
+.linkbtn[hidden]{display:none}

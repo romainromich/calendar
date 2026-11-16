@@ -443,6 +443,17 @@
     var evs = eventsOn(key), ad = evs.filter(function (e) { return e.allDay; }), timed = evs.filter(function (e) { return !e.allDay; });
     var tl = h('div', { class: 'tl' });
     var upcomingMarked = false;
+    var habs = S.habits.filter(function (hb) { return typeof hb.at === 'number'; }).sort(function (a, b) { return a.at - b.at; }), habI = 0;
+    var canMark = anchor <= td;
+    function habitRow(hb) {
+      var on = (S.log[hb.id] || []).indexOf(key) >= 0, late = !on && isToday && hb.at < nm;
+      var b = h('button', { type: 'button', class: 'tl-hab' + (on ? ' on' : '') + (late ? ' late' : ''), disabled: !canMark, 'aria-pressed': on ? 'true' : 'false',
+        'aria-label': (on ? 'Сделано: ' : 'Отметить: ') + hb.title, onclick: function () { toggleHabit(hb, key); } },
+        h('span', { class: 'ck', 'aria-hidden': 'true' }, on ? '✓' : ''), h('b', { class: 'tm' }, hm(hb.at)), h('span', { class: 't' }, hb.title),
+        h('em', { class: 'mute small' }, 'серия ' + streak(hb.id)));
+      return h('div', { class: 'tl-row hab' }, h('span', { class: 'dot', 'aria-hidden': 'true' }), b);
+    }
+    function flushHabits(before) { while (habI < habs.length && habs[habI].at < before) tl.append(habitRow(habs[habI++])); }
     function noteOf(e) {
       var n = firstLine(e.notes), bits = [];
       if (e.place) bits.push(e.place);
@@ -452,6 +463,7 @@
     }
     function badges(e) { return (e._m.rep ? ' ↻' : '') + (e.obs ? ' ↗' : ''); }
     timed.forEach(function (e, i) {
+      flushHabits(e.start);
       var cat = catById(e.cat), state = isPast ? 'past' : isToday ? (e.end <= nm ? 'past' : e.start <= nm ? 'now' : 'next') : 'next';
       var cls = 'tl-card' + (isKey(e) ? ' keyc' : '');
       if (state === 'past') {
@@ -478,15 +490,17 @@
         var gapPast = isPast || (isToday && nx.start <= nm);
         if (!gapPast) {
           var gap = nx.start - e.end, t0 = taskForWindow(gap);
+          flushHabits(nx.start);
           tl.append(h('div', { class: 'tl-row win' }, h('span', { class: 'dot', 'aria-hidden': 'true' }),
             h('div', { class: 'tl-win' },
               h('div', { class: 'win-h' }, 'Окно ' + fmtDur(gap), h('span', { class: 'sub' }, hm(e.end) + '–' + hm(nx.start))),
-              t0 ? h('button', { type: 'button', class: 'win-task', onclick: function () { t0.done = true; save(); render(); } },
+              t0 ? h('button', { type: 'button', class: 'win-task', onclick: function () { t0.done = true; t0.doneAt = ymd(new Date()); save(); render(); } },
                 h('span', { class: 'ck', 'aria-hidden': 'true' }, '○'), h('span', null, h('b', null, 'Успеть: '), t0.title + (t0.dur ? ' · ' + durLabel(t0.dur) : ''))) : null)));
         }
       }
     });
-    if (!evs.length) tl.append(h('div', { class: 'empty big' }, 'На этот день ничего нет.', h('br'), 'Нажми «+», чтобы добавить событие.'));
+    flushHabits(1e9);
+    if (!evs.length && !habs.length) tl.append(h('div', { class: 'empty big' }, 'На этот день ничего нет.', h('br'), 'Нажми «+», чтобы добавить событие.'));
     var adBox = ad.length ? h('div', { class: 'tl-ad' }, ad.map(adChip)) : null;
     return h('div', { class: 'ag-wrap' }, chip, strip, adBox, tl);
   }
@@ -564,7 +578,7 @@
       var due = '';
       if (t.due) { var d = parseYmd(t.due); due = DOW_SHORT[d.getDay()] + ' ' + d.getDate() + ' ' + MON_SHORT[d.getMonth()] + (!t.done && t.due < td ? ' · просрочено' : ''); }
       return h('div', { class: 'item' },
-        checkBtn(t.done, 'Выполнено: ' + t.title, false, function () { t.done = !t.done; save(); renderTasks(); }),
+        checkBtn(t.done, 'Выполнено: ' + t.title, false, function () { t.done = !t.done; t.doneAt = t.done ? ymd(new Date()) : undefined; save(); render(); }),
         h('div', { class: 'body' }, h('div', { class: 't' + (t.done ? ' done' : '') }, t.title),
           h('div', { class: 'mute small tmeta' }, due ? due + ' · ' : '', (function () {
             var sel = h('select', { class: 'durchip', 'aria-label': 'Сколько времени займёт: ' + t.title, onchange: function () { t.dur = +sel.value || undefined; save(); renderTasks(); render(); } });
@@ -582,18 +596,24 @@
     while (log.indexOf(ymd(d)) >= 0) { n++; d = addDays(d, -1); }
     return n;
   }
+  function toggleHabit(hb, key) {
+    var l = S.log[hb.id] || (S.log[hb.id] = []), i = l.indexOf(key);
+    if (i >= 0) l.splice(i, 1); else l.push(key);
+    save(); render();
+  }
   function renderHabits() {
     var root = $('#habits'), td = ymd(today());
     if (!S.habits.length) { root.replaceChildren(h('div', { class: 'empty' }, 'Привычек пока нет.')); return; }
     root.replaceChildren.apply(root, S.habits.map(function (hb) {
       var on = (S.log[hb.id] || []).indexOf(td) >= 0;
       return h('div', { class: 'habit' + (on ? ' on' : '') },
-        checkBtn(on, 'Сегодня сделано: ' + hb.title, true, function () {
-          var l = S.log[hb.id] || (S.log[hb.id] = []), i = l.indexOf(td);
-          if (i >= 0) l.splice(i, 1); else l.push(td);
-          save(); renderHabits();
-        }),
+        checkBtn(on, 'Сегодня сделано: ' + hb.title, true, function () { toggleHabit(hb, td); }),
         h('span', { class: 't' }, hb.title),
+        (function () {
+          var inp = h('input', { type: 'time', class: 'durchip hab-at', value: hb.at != null ? hm(hb.at) : '', 'aria-label': 'Время привычки: ' + hb.title, title: 'Время в линии дня (необязательно)',
+            onchange: function () { var m = /^(\d{1,2}):(\d{2})$/.exec(inp.value); hb.at = m ? +m[1] * 60 + +m[2] : undefined; save(); render(); } });
+          return inp;
+        })(),
         h('span', { class: 'mute small' }, 'серия ' + streak(hb.id)),
         h('button', { type: 'button', class: 'x', 'aria-label': 'Удалить привычку', style: 'border:0;background:transparent;color:var(--mute)', onclick: function () {
           if (!confirm('Удалить привычку «' + hb.title + '» вместе с историей?')) return;
@@ -857,6 +877,7 @@
     sel.value = catById(d.cat).id;
     $('#evRem').value = remToValue(d.rem);
     $('#evNotes').value = d.notes || '';
+    $('#evObsSync').hidden = !(d.obs || '').trim();
     $('#evPlace').value = d.place || '';
     var tsel = $('#evTravel'); tsel.value = String(TRAVELS.some(function (t) { return t[0] === d.travel; }) ? d.travel : 0);
     $('#evObs').value = d.obs || '';
@@ -898,14 +919,23 @@
     var v = $('#evObs').value.trim();
     if (v) go(obsUri('open', { file: v }));
   });
+  function obsSyncShow() { $('#evObsSync').hidden = !$('#evObs').value.trim(); }
+  $('#evObs').addEventListener('input', obsSyncShow);
+  $('#evObsSync').addEventListener('click', function () {
+    var file = $('#evObs').value.trim(), date = $('#evDate').value, cat = catById($('#evCat').value), place = $('#evPlace').value.trim();
+    var when = $('#evAllDay').checked ? 'весь день' : $('#evStart').value + '–' + $('#evEnd').value, n = new Date();
+    var line = date + ' · ' + when + ' · ' + cat.name + (place ? ' · ' + place : '');
+    go(obsUri('new', { file: file, content: '\n> [!info] Данные из календаря на ' + ymd(n) + ' ' + hm(n.getHours() * 60 + n.getMinutes()) + '\n> ' + $('#evTitle').value.trim() + ': ' + line + '\n', append: 'true' }));
+  });
   $('#evObsNew').addEventListener('click', function () {
     var title = $('#evTitle').value.trim() || 'Событие', date = $('#evDate').value;
     var name = (date ? date + ' ' : '') + title.replace(/[\\/:*?"<>|#^\[\]]/g, ' ').replace(/\s+/g, ' ').trim();
     var file = (S.settings.obsFolder ? S.settings.obsFolder.replace(/^\/+|\/+$/g, '') + '/' : '') + name;
     var cat = catById($('#evCat').value);
     var when = $('#evAllDay').checked ? 'весь день' : $('#evStart').value + '–' + $('#evEnd').value;
-    var content = '# ' + title + '\n\n- Дата: ' + date + '\n- Время: ' + when + '\n- Календарь: ' + cat.name + '\n\n## Заметки\n\n';
-    $('#evObs').value = file;
+    var place = $('#evPlace').value.trim();
+    var content = '---\nсобытие: ' + title + '\nдата: ' + date + '\nвремя: ' + when + '\nкалендарь: ' + cat.name + (place ? '\nместо: ' + place : '') + '\n---\n# ' + title + '\n\n- Дата: ' + date + '\n- Время: ' + when + '\n- Календарь: ' + cat.name + (place ? '\n- Место: ' + place : '') + '\n\n## Заметки\n\n';
+    $('#evObs').value = file; obsSyncShow();
     go(obsUri('new', { file: file, content: content }));
   });
 
@@ -1020,8 +1050,9 @@
     e.preventDefault();
     var t = $('#habitIn').value.trim();
     if (!t) return;
-    S.habits.push({ id: uid(), title: t });
-    $('#habitIn').value = ''; save(); renderHabits();
+    var at = /^(\d{1,2}):(\d{2})$/.exec($('#habitAt').value);
+    S.habits.push({ id: uid(), title: t, at: at ? +at[1] * 60 + +at[2] : undefined });
+    $('#habitIn').value = ''; $('#habitAt').value = ''; save(); render();
   });
 
   /* ---------- навигация ---------- */
@@ -1241,7 +1272,7 @@
     save: save, render: render, uid: uid, ymd: ymd, parseYmd: parseYmd, shiftDate: shiftDate, dayDiff: dayDiff, addDays: addDays,
     occursOn: occursOn, eventsOn: eventsOn, catById: catById, hm: hm, toast: toast, mark: mark, normRep: normRep, remMinutes: remMinutes,
     isKey: isKey, hooks: hooks, extra: extra, DOW_SHORT: DOW_SHORT, MON_GEN: MON_GEN, MON_SHORT: MON_SHORT, setAnchor: setAnchor,
-    openSettings: function () { buildSettings(); if (!setDlg.open) setDlg.showModal(); }, h: h, dropMaster: dropMaster, editing: function () { return editing; }, openEvent: openEvent, leaveBuf: leaveBuf
+    openSettings: function () { buildSettings(); if (!setDlg.open) setDlg.showModal(); }, h: h, dropMaster: dropMaster, editing: function () { return editing; }, openEvent: openEvent, leaveBuf: leaveBuf, obsUri: obsUri, go: go
   };
 
   /* клик по затемнённому фону закрывает окно (на ПК; как Escape) */
