@@ -51,11 +51,11 @@ h2{font-size:1.08em}
 .icon-btn.sm{width:24px;height:24px;border:0;font-size:1.3em}
 .card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .sheet-head,#themeToggle{display:none}
-#openSettings small{display:none}
-#openSettings .tile-ic{margin-right:6px}
+#openSettings small,#openReview small{display:none}
+#openSettings .tile-ic,#openReview .tile-ic{margin-right:6px}
 .tile-ic svg{width:16px;height:16px;vertical-align:-3px}
 .sheet-head .btn svg{vertical-align:-4px}
-#openSettings b{font-weight:inherit}
+#openSettings b,#openReview b{font-weight:inherit}
 .sec-title{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
 
 .mini-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
