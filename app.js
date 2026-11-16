@@ -1063,14 +1063,14 @@
       selectField('Календарь по умолчанию', S.cats.map(function (c) { return [c.id, c.name]; }), S.settings.defaultCat, function (v) { S.settings.defaultCat = v; save(); }));
 
     var data = h('div', { style: 'display:flex;flex-wrap:wrap;gap:8px' },
-      h('button', { type: 'button', class: 'btn', onclick: exportData }, 'Экспорт в файл'),
-      h('button', { type: 'button', class: 'btn', onclick: function () { $('#importFile').click(); } }, 'Импорт из файла'),
       h('button', { type: 'button', class: 'btn danger', onclick: function () {
         if (!confirm('Удалить все события, задачи и привычки? Настройки сохранятся. События из Google вернутся при следующей синхронизации.')) return;
+        if (window.CalBackup) window.CalBackup.snapshot('перед очисткой');
         S.events = []; S.tasks = []; S.habits = []; S.log = {}; S.tomb = []; commit();
       } }, 'Очистить данные'),
       h('button', { type: 'button', class: 'btn danger', onclick: function () {
         if (!confirm('Сбросить ВСЁ, включая цвета и календари?')) return;
+        if (window.CalBackup) window.CalBackup.snapshot('перед сбросом');
         S = defaults(); S.seeded = true; save(); applyTheme(); buildSettings(); render();
       } }, 'Сбросить всё'));
 
@@ -1084,7 +1084,7 @@
           S.cats.push({ id: 'c' + uid(), name: 'Новый календарь', color: '#845EF7' }); commit(); renderCatEditor(); refreshDemo();
         } }, '+ Добавить календарь')),
       h('div', { class: 'set-sec' }, h('h3', null, 'Данные'),
-        h('p', { class: 'mute small', style: 'margin-top:0' }, 'Всё хранится только в этом браузере. Экспорт — это резервная копия в JSON.'), data));
+        h('p', { class: 'mute small', style: 'margin-top:0' }, 'Всё хранится только на этом устройстве. Файл с копией можно сделать в разделе выше.'), data));
     var dataSec = setBody.lastElementChild;
     var vaultIn = h('input', { type: 'text', value: S.settings.vault || '', placeholder: 'например, Мои заметки', oninput: function () { S.settings.vault = vaultIn.value.trim(); save(); } });
     var folderIn = h('input', { type: 'text', value: S.settings.obsFolder || '', placeholder: 'Календарь', oninput: function () { S.settings.obsFolder = folderIn.value.trim(); save(); } });
@@ -1096,26 +1096,6 @@
     renderCatEditor(); refreshDemo();
   }
 
-  function exportData() {
-    var blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
-    var a = h('a', { href: URL.createObjectURL(blob), download: 'calendar-' + ymd(new Date()) + '.json' });
-    document.body.append(a); a.click(); a.remove();
-  }
-  $('#importFile').addEventListener('change', function (e) {
-    var f = e.target.files[0];
-    if (!f) return;
-    var r = new FileReader();
-    r.onload = function () {
-      try {
-        var raw = JSON.parse(r.result);
-        if (!raw || !Array.isArray(raw.events)) throw new Error('bad');
-        localStorage.setItem(KEY, JSON.stringify(raw));
-        S = load(); S.seeded = true; save(); buildSettings(); render();
-      } catch (err) { alert('Не удалось прочитать файл: это не экспорт календаря.'); }
-      e.target.value = '';
-    };
-    r.readAsText(f);
-  });
   $('#openSettings').addEventListener('click', function () { buildSettings(); setDlg.showModal(); });
 
   /* ---------- уведомления на странице ---------- */
