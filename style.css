@@ -663,3 +663,6 @@ dialog[open]{animation:sheetUp .55s cubic-bezier(.22,.8,.24,1)}
   #fadeBot{bottom:0;height:150px;background:linear-gradient(transparent,var(--bg) 80%)}
   #app:not([data-view=day]) ~ #fadeTop,#app:not([data-view=day]) ~ #fadeBot{display:none}
 }
+
+/* запас снизу: последняя строка тоже может дойти до центра, эффект не пропадает у края */
+#app[data-view=day] #view{padding-bottom:50vh}

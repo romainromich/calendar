@@ -16,15 +16,15 @@
 
   function apply() {
     raf = 0;
-    var rs = rows(), on = rs.length > 0 && document.documentElement.scrollHeight - window.innerHeight > 120;
+    var rs = rows(), on = rs.length > 0;
     document.documentElement.classList.toggle('drum', on);
-    if (!on) { rs.forEach(function (r) { r.style.opacity = ''; r.style.transform = ''; }); return; }
-    var fy = focusY(), span = window.innerHeight * 0.5;
+    if (!on) return;
+    var fy = focusY(), span = window.innerHeight * 0.46;
     rs.forEach(function (r) {
       var b = r.getBoundingClientRect(), c = b.top + b.height / 2, d = c - fy, t = Math.min(1, Math.abs(d) / span);
       t = t * t * (3 - 2 * t);
-      r.style.opacity = (1 - 0.72 * t).toFixed(3);
-      r.style.transform = reduce ? '' : 'perspective(700px) rotateX(' + (-Math.sign(d) * 20 * t).toFixed(2) + 'deg) scale(' + (1 - 0.07 * t).toFixed(3) + ')';
+      r.style.opacity = (1 - 0.8 * t).toFixed(3);
+      r.style.transform = reduce ? '' : 'perspective(650px) rotateX(' + (-Math.sign(d) * 26 * t).toFixed(2) + 'deg) scale(' + (1 - 0.08 * t).toFixed(3) + ') translateZ(0)';
     });
   }
   function schedule() { if (!raf) raf = requestAnimationFrame(apply); }
