@@ -686,7 +686,13 @@
     var tx = evt.clientX, ty = evt.clientY;
     el.addEventListener('pointerup', function up(u) {
       el.removeEventListener('pointerup', up);
-      if (Math.abs(u.clientX - tx) + Math.abs(u.clientY - ty) < 10) fn();
+      if (Math.abs(u.clientX - tx) + Math.abs(u.clientY - ty) < 10) {
+        /* браузер после касания шлёт ещё и click: он попал бы в открывшееся окно, поэтому гасим его */
+        var swallow = function (c) { c.stopPropagation(); c.preventDefault(); };
+        document.addEventListener('click', swallow, true);
+        setTimeout(function () { document.removeEventListener('click', swallow, true); }, 450);
+        fn();
+      }
     });
   }
   function startMove(evt, node, e) {
