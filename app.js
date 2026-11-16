@@ -467,7 +467,7 @@
       var cat = catById(e.cat), state = isPast ? 'past' : isToday ? (e.end <= nm ? 'past' : e.start <= nm ? 'now' : 'next') : 'next';
       var cls = 'tl-card' + (isKey(e) ? ' keyc' : '');
       if (state === 'past') {
-        tl.append(h('div', { class: 'tl-row past' }, h('span', { class: 'dot', 'aria-hidden': 'true' }),
+        tl.append(h('div', { class: 'tl-row past' }, h('span', { class: 'dot', 'aria-hidden': 'true' }, '✓'),
           h('button', { type: 'button', class: 'tl-past', onclick: function () { openEvent(e); } }, hm(e.start) + ' · ' + evLabel(e))));
       } else if (state === 'now') {
         var pct = Math.max(2, Math.min(100, Math.round((nm - e.start) / Math.max(1, e.end - e.start) * 100)));
