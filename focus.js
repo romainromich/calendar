@@ -7,7 +7,7 @@
   var fadeT = document.createElement('div'), fadeB = document.createElement('div');
   fadeT.id = 'fadeTop'; fadeB.id = 'fadeBot';
   fadeT.setAttribute('aria-hidden', 'true'); fadeB.setAttribute('aria-hidden', 'true');
-  document.body.append(fadeT, fadeB);
+  (document.getElementById('app') || document.body).append(fadeT, fadeB);
 
   var raf = 0, lastKey = '', had = false;
 
@@ -23,8 +23,8 @@
     rs.forEach(function (r) {
       var b = r.getBoundingClientRect(), c = b.top + b.height / 2, d = c - fy, t = Math.min(1, Math.abs(d) / span);
       t = t * t * (3 - 2 * t);
-      r.style.opacity = (1 - 0.8 * t).toFixed(3);
-      r.style.transform = reduce ? '' : 'perspective(650px) rotateX(' + (-Math.sign(d) * 26 * t).toFixed(2) + 'deg) scale(' + (1 - 0.08 * t).toFixed(3) + ') translateZ(0)';
+      r.style.opacity = (1 - 0.55 * t).toFixed(3);
+      r.style.transform = reduce ? '' : 'perspective(650px) rotateX(' + (-Math.sign(d) * 7 * t).toFixed(2) + 'deg) scale(' + (1 - 0.04 * t).toFixed(3) + ') translateZ(0)';
     });
   }
   function schedule() { if (!raf) raf = requestAnimationFrame(apply); }

@@ -666,3 +666,5 @@ dialog[open]{animation:sheetUp .55s cubic-bezier(.22,.8,.24,1)}
 
 /* запас снизу: последняя строка тоже может дойти до центра, эффект не пропадает у края */
 #app[data-view=day] #view{padding-bottom:50vh}
+@media(max-width:760px){#bottomNav{z-index:18}#fab{z-index:19}#fadeTop,#fadeBot{z-index:14}}
+@media(max-width:760px){.strip2{z-index:15}}
