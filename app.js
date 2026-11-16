@@ -1098,7 +1098,8 @@
       } }, [['def', 'Напоминание: общее'], ['none', 'Без напоминаний'], ['5', 'За 5 мин'], ['10', 'За 10 мин'], ['30', 'За 30 мин'], ['60', 'За 1 час'], ['1440', 'За 1 день']]
         .map(function (r) { return h('option', { value: r[0] }, r[1]); }));
       rsel.value = c.rem === undefined ? 'def' : c.rem === null ? 'none' : String(c.rem);
-      return h('div', { class: 'cat-edit' }, col, name, rsel, del);
+      var vis = h('input', { type: 'checkbox', checked: !S.hidden[c.id], onchange: function () { S.hidden[c.id] = !vis.checked; save(); render(); } });
+      return h('div', { class: 'cat-edit' }, col, name, rsel, del, h('label', { class: 'cat-vis' }, vis, 'Показывать в календаре'));
     }));
   }
 
