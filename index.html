@@ -7,9 +7,19 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#08090C">
-<link rel="stylesheet" href="style.css?v=45">
+<link rel="stylesheet" href="style.css?v=47">
 </head>
 <body>
+<div id="splash" aria-hidden="true"><div class="sp-ic"><i class="sp-t1"></i><i class="sp-m"><b class="sp-dn">ПН</b><b class="sp-nm">16</b></i><i class="sp-t3"></i></div></div>
+<script>
+(function(){var s=document.getElementById('splash');
+try{if(sessionStorage.getItem('splash')){s.remove();return;}sessionStorage.setItem('splash','1');}catch(e){}
+var d=new Date(),days=['ВС','ПН','ВТ','СР','ЧТ','ПТ','СБ'];
+s.querySelector('.sp-dn').textContent=days[d.getDay()];s.querySelector('.sp-nm').textContent=d.getDate();
+try{var c=JSON.parse(localStorage.getItem('calendar.v1')||'{}').settings.colors;if(c&&c.accent){s.style.setProperty('--sa',c.accent);s.style.setProperty('--sb',c.a2||'#A78BFA');}}catch(e){}
+function done(){if(s.parentNode){s.classList.add('out');setTimeout(function(){if(s.parentNode)s.remove();},450);}}
+setTimeout(done,1750);s.addEventListener('click',done);})();
+</script>
 <div id="app" data-tab="cal">
 <div id="scrim"></div>
 
@@ -182,16 +192,16 @@
 </dialog>
 
 
-<script src="parse.js?v=45"></script>
-<script src="app.js?v=45"></script>
-<script src="notify.js?v=45"></script>
-<script src="sync.js?v=45"></script>
-<script src="push.js?v=45"></script>
-<script src="backup.js?v=45"></script>
-<script src="prep.js?v=45"></script>
-<script src="voice.js?v=45"></script>
-<script src="review.js?v=45"></script>
-<script src="offline.js?v=45"></script>
-<script src="focus.js?v=45"></script>
+<script src="parse.js?v=47"></script>
+<script src="app.js?v=47"></script>
+<script src="notify.js?v=47"></script>
+<script src="sync.js?v=47"></script>
+<script src="push.js?v=47"></script>
+<script src="backup.js?v=47"></script>
+<script src="prep.js?v=47"></script>
+<script src="voice.js?v=47"></script>
+<script src="review.js?v=47"></script>
+<script src="offline.js?v=47"></script>
+<script src="focus.js?v=47"></script>
 </body>
 </html>
