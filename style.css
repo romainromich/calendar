@@ -559,3 +559,14 @@ dialog[open]{animation:sheetUp .55s cubic-bezier(.22,.8,.24,1)}
 .plancard{border:1px solid var(--line)}
 .plancard.on,.plancard.on:hover{background:color-mix(in srgb,var(--accent) 16%,transparent);border-color:var(--accent);color:var(--ink)}
 .plancard.on .mute{color:var(--ink);opacity:.8}
+
+/* телефон: без горизонтальной прокрутки в диалогах */
+@media(max-width:760px){
+  dialog{overflow-x:hidden}
+  dialog *{min-width:0}
+  .cat-edit{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px}
+  .cat-edit select{grid-column:1/-1;order:5;width:100%}
+  #evDialog .dlg-actions,#prepDialog .dlg-actions{flex-wrap:wrap}
+  #evDialog .dlg-actions .grow{flex:0 0 0;display:block}
+  #evDialog .dlg-actions .btn{flex:1 1 auto;justify-content:center}
+}
