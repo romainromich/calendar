@@ -642,3 +642,8 @@ dialog[open]{animation:sheetUp .55s cubic-bezier(.22,.8,.24,1)}
   #side #gcard .btn{height:34px;padding:0 10px;font-size:13px;border-radius:14px;margin-top:2px}
   .cat-vis{display:flex;grid-column:1/-1;align-items:center;gap:8px;font-size:.9rem}
 }
+
+/* события на линии дня: маленький кружок, как у «Окна» */
+.tl .tl-row:not(.now):not(.win):not(.hab) .dot{border:0;background:transparent;font-size:0}
+.tl .tl-row:not(.now):not(.win):not(.hab) .dot::after{content:"";width:10px;height:10px;border-radius:50%;box-sizing:border-box;border:2px solid var(--accent);background:var(--bg)}
+.tl .tl-row.past:not(.hab) .dot::after{background:var(--accent)}
