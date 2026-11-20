@@ -391,10 +391,15 @@
     if (c.id === 'deadline' || /дедлайн|срок/i.test(c.name || '')) return false;
     return c.id === 'study' || /уч[её]б|пары|универ|миэт/i.test(c.name || '') || /(^|[^а-яё])пара([^а-яё]|$)|лекци|семинар/i.test(e.title + ' ' + (e.notes || ''));
   }
-  function remNote(e, mins) {
+  /* тип занятия, аудитория, преподаватель — для «Дня» и уведомлений */
+  function lessonInfo(e) {
     var where = (e.place || '').trim(), lesson = isLesson(e), kind = '';
     if (lesson) LESSON.some(function (x) { if (x[0].test(e.title + ' ' + (e.notes || ''))) { kind = x[1]; return true; } return false; });
     if (where && /^[\dА-Яа-яA-Za-z]{0,2}-?\d{2,4}[а-яa-z]?$/i.test(where)) where = 'ауд. ' + where;     // «3204», «4-401» → «ауд. 3204»
+    return { lesson: lesson, kind: kind, where: where, teacher: (e.teacher || '').trim() };
+  }
+  function remNote(e, mins) {
+    var li = lessonInfo(e), where = li.where, lesson = li.lesson, kind = li.kind;
     var when = e.allDay ? 'весь день' : mins == null ? 'в ' + hm(e.start) : mins <= 0 ? 'начинается сейчас, в ' + hm(e.start) : 'через ' + durLabel(mins) + ', в ' + hm(e.start);
     var parts = [when.charAt(0).toUpperCase() + when.slice(1)];
     if (lesson) parts.push(kind ? kind : 'пара');
@@ -533,11 +538,14 @@
     }
     function flushHabits(before) { while (habI < habs.length && habs[habI].at < before) tl.append(habitRow(habs[habI++])); }
     function noteOf(e) {
-      var n = firstLine(e.notes), bits = [];
-      if (e.place) bits.push(e.place);
+      var n = firstLine(e.notes), li = lessonInfo(e), info = [], bits = [];
+      if (li.kind) info.push(h('span', { class: 'tl-kind' }, li.kind));
+      if (li.where) info.push(h('span', { class: 'tl-i' }, h('i', { class: 'ic-pin', 'aria-hidden': 'true' }), li.where));
+      if (li.teacher) info.push(h('span', { class: 'tl-i' }, h('i', { class: 'ic-user', 'aria-hidden': 'true' }), li.teacher));
       if (e.travel && !e.allDay) bits.push('дорога ' + fmtDur(e.travel) + ', выйти в ' + hm(Math.max(0, e.start - e.travel)));
-      if (!n && !bits.length) return null;
-      return h('div', null, bits.length ? h('div', { class: 'tl-note' }, bits.join(' · ')) : null, n ? h('div', { class: 'tl-note' }, n) : null);
+      if (!n && !bits.length && !info.length) return null;
+      return h('div', null, info.length ? h('div', { class: 'tl-info' }, info) : null,
+        bits.length ? h('div', { class: 'tl-note' }, bits.join(' · ')) : null, n ? h('div', { class: 'tl-note' }, n) : null);
     }
     function badges(e) { return (e._m.rep ? ' ↻' : '') + (e.obs ? ' ↗' : ''); }
     timed.forEach(function (e, i) {
@@ -546,7 +554,7 @@
       var cls = 'tl-card' + (isKey(e) ? ' keyc' : '');
       if (state === 'past') {
         tl.append(h('div', { class: 'tl-row past' }, h('span', { class: 'dot', 'aria-hidden': 'true' }, '✓'),
-          h('button', { type: 'button', class: 'tl-past', onclick: function () { openEvent(e); } }, hm(e.start) + ' · ' + evLabel(e))));
+          h('button', { type: 'button', class: 'tl-past', onclick: function () { openEvent(e); } }, hm(e.start) + ' · ' + evLabel(e) + (lessonInfo(e).where ? ' · ' + lessonInfo(e).where : ''))));
       } else if (state === 'now') {
         var pct = Math.max(2, Math.min(100, Math.round((nm - e.start) / Math.max(1, e.end - e.start) * 100)));
         tl.append(h('div', { class: 'tl-row now' }, h('span', { class: 'dot', 'aria-hidden': 'true' }),
@@ -1052,16 +1060,21 @@
     $('#evNotes').value = d.notes || '';
     $('#evObsSync').hidden = !(d.obs || '').trim();
     $('#evPlace').value = d.place || '';
+    $('#evTeacher').value = d.teacher || '';
+    var tset = {};
+    S.events.forEach(function (x) { if (x.teacher) tset[x.teacher] = 1; });
+    $('#evTeacherList').replaceChildren.apply($('#evTeacherList'), Object.keys(tset).sort().map(function (t) { return h('option', { value: t }); }));
     var tsel = $('#evTravel'); tsel.value = String(TRAVELS.some(function (t) { return t[0] === d.travel; }) ? d.travel : 0);
     $('#evObs').value = d.obs || '';
     // «Ещё» раскрыто, если там что-то заполнено; в подсказке — что именно
     var filled = [];
     if (d.rem !== undefined) filled.push('напоминание');
     if (d.place || d.travel) filled.push(d.place ? d.place : 'дорога');
+    if (d.teacher) filled.push(d.teacher);
     if ((d.notes || '').trim()) filled.push('заметка');
     if ((d.obs || '').trim()) filled.push('Obsidian');
     $('#evMore').open = filled.length > 0;
-    $('#evMoreHint').textContent = filled.length ? filled.join(' · ') : 'напоминание, место и дорога, заметка, Obsidian';
+    $('#evMoreHint').textContent = filled.length ? filled.join(' · ') : 'напоминание, место, преподаватель, заметка, Obsidian';
     var preset = repPreset(rep);
     var rs = $('#evRep');
     rs.replaceChildren.apply(rs, REMOVE_KEEP(REPS, preset === 'keep').map(function (r) { return h('option', { value: r[0] }, r[1]); }));
@@ -1146,7 +1159,7 @@
     }
     var data = { title: $('#evTitle').value.trim() || 'Событие', date: $('#evDate').value, start: s0, end: en, cat: $('#evCat').value, notes: $('#evNotes').value,
       allDay: allDay || undefined, rem: valueToRem($('#evRem').value), obs: $('#evObs').value.trim() || undefined,
-      place: $('#evPlace').value.trim() || undefined, travel: (!allDay && +$('#evTravel').value) || undefined };
+      place: $('#evPlace').value.trim() || undefined, teacher: $('#evTeacher').value.trim() || undefined, travel: (!allDay && +$('#evTravel').value) || undefined };
     if (data.place && data.travel) { (S.settings.places || (S.settings.places = {}))[data.place.toLowerCase()] = data.travel; }
     if (!allDay) data.days = undefined; else if (editing && editing._m.days) data.days = editing._m.days;
     var occ = editing;

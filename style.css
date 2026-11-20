@@ -801,3 +801,10 @@ dialog#setDialog{width:min(920px,95vw);padding-top:0}
   .ev.short{padding-top:1px;padding-bottom:1px}
   .ev.short b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-line-clamp:unset}
 }
+/* «День»: тип занятия, аудитория, преподаватель */
+.tl-info{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin-top:4px;font-size:13px;color:color-mix(in srgb,var(--ink) 80%,transparent)}
+.tl-kind{padding:1px 8px;border-radius:10px;font-size:12px;background:color-mix(in srgb,var(--c) 22%,transparent);color:color-mix(in srgb,var(--c) 45%,var(--ink))}
+.tl-i{display:inline-flex;align-items:center;gap:5px;min-width:0}
+.tl-i i{flex:none;width:13px;height:13px;background:currentColor;opacity:.7;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
+.ic-pin{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Cpath d='M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z'/%3E%3Ccircle cx='12' cy='9' r='2.5'/%3E%3C/svg%3E")}
+.ic-user{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21c0-4 4-6 8-6s8 2 8 6'/%3E%3C/svg%3E")}
