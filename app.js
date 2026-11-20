@@ -797,9 +797,10 @@
   }
 
   /* ---------- изменение событий и повторов ---------- */
-  var FIELDS = ['title', 'start', 'end', 'cat', 'notes', 'allDay', 'days', 'rem', 'obs'];
+  var FIELDS = ['title', 'start', 'end', 'cat', 'notes', 'allDay', 'days', 'rem', 'obs', 'place', 'travel', 'teacher'];
   function baseFields(m) {
-    return { title: m.title, start: m.start, end: m.end, cat: m.cat, notes: m.notes || '', allDay: m.allDay, days: m.days, rem: m.rem, obs: m.obs };
+    return { title: m.title, start: m.start, end: m.end, cat: m.cat, notes: m.notes || '', allDay: m.allDay, days: m.days, rem: m.rem, obs: m.obs,
+      place: m.place, travel: m.travel, teacher: m.teacher };
   }
 
   /* ---------- «Отменить» ---------- */
