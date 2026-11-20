@@ -162,9 +162,10 @@
     // ---- время
     var explicitEnd = null, duration = null;
     if (!res.hasTime) take(new RegExp(L + '(?:с\\s+)?(\\d{1,2})(?::(\\d{2}))?\\s*[-–—]\\s*(\\d{1,2})(?::(\\d{2}))?' + R, 'iu'), function (m) {
-      if (!m[2] && !m[4] && !/^с/i.test(m[0])) return false;
+      if (!m[2] && !m[4] && !/^с/i.test(m[0]) && !(+m[1] >= 18 && +m[3] <= 8)) return false;
       if (+m[1] > 23 || +m[3] > 24) return false;
       var a = +m[1] * 60 + (m[2] ? +m[2] : 0), b = +m[3] * 60 + (m[4] ? +m[4] : 0);
+      if (b <= a && a >= 18 * 60 && b <= 8 * 60) b += 1440;     // «23-2»: через полночь
       if (b <= a) return false;
       res.start = a; explicitEnd = b; res.hasTime = true;
     });
@@ -190,12 +191,17 @@
 
     if (dueAt != null) {
       // «сдать лабу до 23:59»: без времени начала это срок, а не блок с 9 утра
-      if (res.hasTime && explicitEnd == null) explicitEnd = dueAt;
+      if (res.hasTime && explicitEnd == null) {
+        // «с 23 до 2»: «до 2» уже стало 14:00 (днём), а вечером имеется в виду ночь
+        var raw = dueAt <= res.start && dueAt >= 13 * 60 && dueAt < 20 * 60 ? dueAt - 720 : dueAt;
+        explicitEnd = raw <= res.start && res.start >= 18 * 60 && raw <= 8 * 60 ? raw + 1440 : dueAt;
+      }
       else if (!res.hasTime) { res.start = Math.min(dueAt, 24 * 60 - 1); res.hasTime = true; res.deadline = true; duration = duration || 15; }
     }
     if (explicitEnd != null && explicitEnd > res.start) res.end = explicitEnd;
     else res.end = res.start + (duration || 60);
-    if (res.end > 24 * 60) res.end = 24 * 60;
+    if (res.end > res.start + 16 * 60) res.end = res.start + 16 * 60;
+    if (res.deadline && res.end > 24 * 60) res.end = 24 * 60;          // срок в 23:59 не переходит на завтра
 
     // ---- категория
     var tag = null;

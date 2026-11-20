@@ -32,7 +32,7 @@
   function ymd(d) { return P.ymd(d); }
   function parseYmd(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
   function addDays(d, n) { return P.addDays(d, n); }
-  function hm(min) { return Math.floor(min / 60) + ':' + pad(min % 60); }
+  function hm(min) { min = ((min % 1440) + 1440) % 1440; return Math.floor(min / 60) + ':' + pad(min % 60); }   // 26:00 → 2:00 (событие через полночь)
   function toInput(min) { return pad(Math.floor(min / 60)) + ':' + pad(min % 60); }
   function fromInput(v) { var p = v.split(':'); return +p[0] * 60 + +p[1]; }
   function sameDay(a, b) { return ymd(a) === ymd(b); }
@@ -236,6 +236,12 @@
     S.events.forEach(function (m) {
       if ((all || !S.hidden[m.cat]) && occursOn(m, date)) out.push(Object.assign({}, m, { date: date, _m: m }));
     });
+    // события через полночь: хвост вчерашнего события в начале этого дня
+    var prev = shiftDate(date, -1);
+    S.events.forEach(function (m) {
+      if (m.allDay || !(m.end > 1440) || !(all || !S.hidden[m.cat]) || !occursOn(m, prev)) return;
+      out.push(Object.assign({}, m, { date: date, start: 0, end: Math.min(m.end - 1440, 1440), _m: m, _cont: true, _from: prev }));
+    });
     return out.sort(function (a, b) { return (b.allDay ? 1 : 0) - (a.allDay ? 1 : 0) || a.start - b.start || a.end - b.end; });
   }
   var TRAVELS = [[0, 'Не нужна'], [5, '5 мин'], [10, '10 мин'], [15, '15 мин'], [20, '20 мин'], [30, '30 мин'], [45, '45 мин'], [60, '1 ч'], [90, '1,5 ч']];
@@ -250,7 +256,7 @@
     return typeof S.settings.remDefault === 'number' ? S.settings.remDefault : null;
   }
   function isKey(e) { return e.cat === 'deadline' || /коллок|экзамен|зач[её]т|дедлайн|контрольн|защит|сдать/i.test(e.title); }
-  function evLabel(e) { return (isKey(e) ? '⚑ ' : '') + e.title; }
+  function evLabel(e) { return (e._cont ? '↪ ' : '') + (isKey(e) ? '⚑ ' : '') + e.title; }
   /* мягкие переносы для узких колонок недели: «Програм-мирование», а не «Программир / ование» */
   function shy(text) {
     var V = 'аеёиоуыэюяaeiouy', isV = function (c) { return V.indexOf(c.toLowerCase()) >= 0; }, isL = function (c) { return /[a-zа-яё]/i.test(c); };
@@ -445,7 +451,7 @@
       var key = ymd(d), isToday = sameDay(d, td), all = eventsOn(key);
       var evs = all.filter(function (e) { return !e.allDay; });
       adCells.push(h('div', { class: 'ad-cell' }, all.filter(function (e) { return e.allDay; }).map(adChip)));
-      var mins = evs.reduce(function (a, e) { return a + (e.end - e.start); }, 0);
+      var mins = evs.reduce(function (a, e) { return a + (Math.min(e.end, 1440) - e.start); }, 0);
       var load = all.length ? (mins ? Math.floor(mins / 60) + ' ч' + (mins % 60 ? ' ' + (mins % 60) + ' м' : '') + ' · ' : '') + all.length + ' соб.' : 'свободно';
       head.append(h('div', { class: 'dh' + (isToday ? ' today' : '') },
         h('div', { class: 'top' }, h('span', { class: 'mute' }, DOW_SHORT[d.getDay()]),
@@ -642,7 +648,7 @@
       (function (i) {
         var d = addDays(td, i);
         eventsOn(ymd(d)).forEach(function (e) {
-          if (!isKey(e)) return;
+          if (!isKey(e) || e._cont) return;
           if (i === 0 && !e.allDay && e.end <= nm) return;
           list.push({ d: d, e: e, n: i });
         });
@@ -782,7 +788,7 @@
     var s = startOfWeek(anchor), root = $('#load'), days = [], max = 0, total = 0;
     for (var i = 0; i < 7; i++) {
       var d = addDays(s, i);
-      var mins = eventsOn(ymd(d)).filter(function (e) { return !e.allDay; }).reduce(function (a, e) { return a + (e.end - e.start); }, 0);
+      var mins = eventsOn(ymd(d)).filter(function (e) { return !e.allDay; }).reduce(function (a, e) { return a + (Math.min(e.end, 1440) - e.start); }, 0);
       days.push({ d: d, m: mins }); max = Math.max(max, mins); total += mins;
     }
     var top = Math.max(240, max);
@@ -925,6 +931,7 @@
   function startMove(evt, node, e) {
     if (evt.button !== 0) return;
     evt.stopPropagation();
+    if (e._cont) { node.addEventListener('pointerup', function () { openEvent(e); }, { once: true }); return; }   // хвост ночного события не тащим
     if (evt.pointerType === 'touch') { tapOnly(evt, node, function () { openEvent(e); }); return; }
     var hh = HH(), hs = S.settings.hourStart, he = S.settings.hourEnd, cols = colsInfo();
     var src = colAt(cols, evt.clientX), sx = evt.clientX, sy = evt.clientY, dur = e.end - e.start;
@@ -948,7 +955,7 @@
   }
 
   function startResize(evt, node, e) {
-    if (evt.button !== 0 || evt.pointerType === 'touch') return;
+    if (evt.button !== 0 || evt.pointerType === 'touch' || e._cont || e.end > 1440) return;
     evt.stopPropagation(); evt.preventDefault();
     var hh = HH(), he = S.settings.hourEnd, sy = evt.clientY, ne = e.end, started = false, timeEl = node.querySelector('span');
     track(evt.target, evt.pointerId, function (ev) {
@@ -1047,13 +1054,14 @@
   function valueToRem(v) { return v === 'def' ? undefined : v === 'none' ? null : +v; }
 
   function openEvent(ev, preset) {
+    if (ev && ev._cont) ev = Object.assign({}, ev._m, { date: ev._from, _m: ev._m });
     editing = ev;
     var d = ev || Object.assign({ title: '', date: ymd(anchor), start: 9 * 60, end: 10 * 60, cat: S.settings.defaultCat, notes: '' }, preset || {});
     var rep = ev && ev._m.rep, ro = !!(ev && ev._m.ro);
     $('#evHeading').textContent = ev ? (rep ? 'Редактировать повторяющееся событие' : 'Редактировать событие') : 'Новое событие';
     $('#evTitle').value = d.title; $('#evDate').value = d.date;
     $('#evAllDay').checked = !!d.allDay; syncAllDay();
-    $('#evStart').value = toInput(d.start); $('#evEnd').value = toInput(d.end >= 24 * 60 ? 23 * 60 + 59 : d.end);
+    $('#evStart').value = toInput(d.start); $('#evEnd').value = toInput(d.end % 1440);
     var sel = $('#evCat');
     sel.replaceChildren.apply(sel, S.cats.map(function (c) { return h('option', { value: c.id }, c.name); }));
     sel.value = catById(d.cat).id;
@@ -1151,7 +1159,8 @@
     e.preventDefault();
     var allDay = $('#evAllDay').checked;
     var s0 = allDay ? 0 : fromInput($('#evStart').value), en = allDay ? 24 * 60 : fromInput($('#evEnd').value);
-    if (!allDay && en <= s0) en = Math.min(s0 + 30, 24 * 60);
+    // конец раньше начала — событие через полночь (23:00–2:00), но не длиннее 16 ч
+    if (!allDay && en <= s0) en = en + 1440 - s0 <= 16 * 60 ? en + 1440 : Math.min(s0 + 30, 24 * 60);
     var pv = $('#evRep').value, rep;
     if (pv === 'keep') rep = editing ? normRep(editing._m.rep) : null;
     else {

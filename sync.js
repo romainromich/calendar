@@ -179,7 +179,7 @@
       delete e.allDay; delete e.days;
       var s = new Date(g.start.dateTime), en = new Date(g.end.dateTime);
       e.date = C.ymd(s); e.start = s.getHours() * 60 + s.getMinutes();
-      e.end = C.ymd(en) === e.date ? en.getHours() * 60 + en.getMinutes() : 1440;
+      e.end = Math.min(e.start + Math.round((en - s) / 60000), 2880);    // через полночь — больше 24:00
       if (e.end <= e.start) e.end = Math.min(e.start + 30, 1440);
     }
     if (g.reminders && g.reminders.useDefault === false) {

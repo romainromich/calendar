@@ -23,7 +23,7 @@
   }
   function weekEvents(ws) {
     var out = [];
-    for (var i = 0; i < 7; i++) { var d = C.addDays(ws, i), key = C.ymd(d); C.eventsOn(key).forEach(function (e) { out.push({ d: d, key: key, e: e }); }); }
+    for (var i = 0; i < 7; i++) { var d = C.addDays(ws, i), key = C.ymd(d); C.eventsOn(key).forEach(function (e) { if (!e._cont) out.push({ d: d, key: key, e: e }); }); }
     return out;
   }
   function isPast(x, todayKey) { return x.key < todayKey || (x.key === todayKey && (x.e.allDay || x.e.end <= nowMin())); }

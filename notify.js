@@ -30,6 +30,7 @@
     for (var i = 0; i <= 2; i++) {
       var key = C.ymd(C.addDays(base, i));
       C.eventsOn(key, true).forEach(function (e) {
+        if (e._cont) return;   // хвост ночного события: напоминание уже было накануне
         if (e.travel && !e.allDay) {                       // «пора выходить»: старт минус дорога минус запас на сборы
           var dd = C.parseYmd(key), st = new Date(dd.getFullYear(), dd.getMonth(), dd.getDate(), Math.floor(e.start / 60), e.start % 60).getTime();
           var trig = st - (e.travel + C.leaveBuf()) * 60000, lk = e._m.id + '|' + key + '|leave|' + e.travel;
