@@ -35,7 +35,7 @@
           var trig = st - (e.travel + C.leaveBuf()) * 60000, lk = e._m.id + '|' + key + '|leave|' + e.travel;
           if (nowTs >= trig && nowTs < st && !fired[lk]) {
             fired[lk] = nowTs; changed = true;
-            show('Пора выходить', e.title + ' в ' + C.hm(e.start) + ' · дорога ' + e.travel + ' мин · выйти в ' + C.hm(e.start - e.travel));
+            show('Пора выходить: ' + e.title, 'Начало в ' + C.hm(e.start) + (e.place ? ' · ' + C.remNote(e).body.split(' · ').pop() : '') + ' · дорога ' + e.travel + ' мин');
           }
         }
         var rem = C.remMinutes(e);
@@ -49,7 +49,8 @@
         if (nowTs >= trigger && nowTs < endTs && !fired[fk]) {
           fired[fk] = nowTs; changed = true;
           var left = Math.round((startTs - nowTs) / 60000);
-          show((C.isKey(e) ? '⚑ ' : '') + e.title, (e.allDay ? 'Весь день, ' + key : when(left) + ', в ' + C.hm(e.start)));
+          var n = C.remNote(e, left);
+          show(n.title, n.body);
         }
       });
     }

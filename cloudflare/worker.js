@@ -124,7 +124,9 @@ async function handle(req, env) {
   const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
   if (url.pathname === '/') return new Response('calendar-push ok', { headers: cors });
-  if (!origin || !ALLOWED.includes(origin)) return json({ error: 'origin' }, 403);      // только со страницы календаря
+  // /due и /vapid читает сервис-воркер; /due отдаёт только по секретному id устройства
+  const open = req.method === 'GET' && (url.pathname === '/due' || url.pathname === '/vapid');
+  if (!open && (!origin || !ALLOWED.includes(origin))) return json({ error: 'origin' }, 403);      // остальное только со страницы календаря
   if (req.method === 'POST') {
     if (limited(req)) return json({ error: 'rate' }, 429);
     if (!authed(req, env)) return json({ error: 'token' }, 401);
@@ -132,6 +134,7 @@ async function handle(req, env) {
   if (url.pathname === '/vapid') return json({ key: (await vapid(env)).pub });
   if (url.pathname === '/due') {
     const id = url.searchParams.get('id') || '';
+    if (!/^[0-9a-f]{16,64}$/.test(id)) return json({ items: [] });
     const s = await load(env);
     const items = s.due[id] || [];
     if (items.length) { delete s.due[id]; await save(env, s); }

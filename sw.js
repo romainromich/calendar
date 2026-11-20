@@ -1,4 +1,4 @@
-const V = '54';
+const V = '55';
 const CACHE = 'calendar-v' + V;
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png']
   .concat(['style.css', 'parse.js', 'app.js', 'notify.js', 'sync.js', 'push.js', 'backup.js', 'prep.js', 'voice.js', 'review.js', 'offline.js', 'focus.js', 'cloudsync.js', 'boot.js', 'splash.js'].map((f) => './' + f + '?v=' + V));
@@ -15,17 +15,28 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   e.waitUntil((async () => {
     let items = [];
+    const c = await caches.open('push-cfg');
+    const u = (n) => new URL(n, self.registration.scope).href;
+    const read = async (n, def) => { try { const r = await c.match(u(n)); return r ? await r.json() : def; } catch (err) { return def; } };
+    const shown = await read('push-shown.json', {});
     try {
-      const c = await caches.open('push-cfg');
-      const r = await c.match(new URL('push-cfg.json', self.registration.scope).href);
-      if (r) {
-        const cfg = await r.json();
+      const cfg = await read('push-cfg.json', null);
+      if (cfg) {
         const d = await fetch(cfg.url + '/due?id=' + encodeURIComponent(cfg.id));
         items = (await d.json()).items || [];
       }
-    } catch (err) { /* покажем общее уведомление */ }
-    if (!items.length) items = [{ title: 'Календарь', body: 'Напоминание' }];
-    await Promise.all(items.map((i) => self.registration.showNotification(i.title, { body: i.body, icon: 'icon-192.png', badge: 'icon-192.png', tag: i.title + '|' + i.body })));
+    } catch (err) { /* сервер не ответил — возьмём текст из копии расписания */ }
+    const now = Date.now();
+    if (!items.length) {
+      const local = await read('push-items.json', []);
+      items = local.filter((i) => i.at <= now + 2 * 60000 && i.at >= now - 20 * 60000 && !shown[i.k]);
+    }
+    items = items.filter((i) => !i.k || !shown[i.k]);
+    if (!items.length) items = [{ title: 'Календарь', body: 'Откройте приложение, чтобы увидеть напоминание' }];
+    items.forEach((i) => { if (i.k) shown[i.k] = now; });
+    Object.keys(shown).forEach((k) => { if (now - shown[k] > 3 * 86400000) delete shown[k]; });
+    await c.put(u('push-shown.json'), new Response(JSON.stringify(shown)));
+    await Promise.all(items.map((i) => self.registration.showNotification(i.title, { body: i.body, icon: 'icon-192.png', badge: 'icon-192.png', tag: i.k || (i.title + '|' + i.body) })));
   })());
 });
 self.addEventListener('notificationclick', (e) => {

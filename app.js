@@ -384,6 +384,24 @@
     return out;
   }
 
+  /* текст напоминания: что, когда, где; для пар — тип занятия и аудитория */
+  var LESSON = [[/лекци/i, 'лекция'], [/семинар/i, 'семинар'], [/практи/i, 'практика'], [/лаб/i, 'лабораторная'], [/коллок/i, 'коллоквиум'], [/экзамен/i, 'экзамен'], [/зач[её]т/i, 'зачёт'], [/консульт/i, 'консультация']];
+  function isLesson(e) {
+    var c = catById(e.cat);
+    if (c.id === 'deadline' || /дедлайн|срок/i.test(c.name || '')) return false;
+    return c.id === 'study' || /уч[её]б|пары|универ|миэт/i.test(c.name || '') || /(^|[^а-яё])пара([^а-яё]|$)|лекци|семинар/i.test(e.title + ' ' + (e.notes || ''));
+  }
+  function remNote(e, mins) {
+    var where = (e.place || '').trim(), lesson = isLesson(e), kind = '';
+    if (lesson) LESSON.some(function (x) { if (x[0].test(e.title + ' ' + (e.notes || ''))) { kind = x[1]; return true; } return false; });
+    if (where && /^[\dА-Яа-яA-Za-z]{0,2}-?\d{2,4}[а-яa-z]?$/i.test(where)) where = 'ауд. ' + where;     // «3204», «4-401» → «ауд. 3204»
+    var when = e.allDay ? 'весь день' : mins == null ? 'в ' + hm(e.start) : mins <= 0 ? 'начинается сейчас, в ' + hm(e.start) : 'через ' + durLabel(mins) + ', в ' + hm(e.start);
+    var parts = [when.charAt(0).toUpperCase() + when.slice(1)];
+    if (lesson) parts.push(kind ? kind : 'пара');
+    if (where) parts.push(where);
+    return { title: (isKey(e) ? '⚑ ' : '') + e.title, body: parts.join(' · ') };
+  }
+
   /* выбор из нескольких событий, слитых в одну плашку */
   function pickEvent(list, d) {
     var dlg = h('dialog', { class: 'pick-dlg' });
@@ -1525,7 +1543,7 @@
     srvToken: srvToken, srvHeaders: srvHeaders,
     get S() { return S; }, set S(v) { S = v; },
     save: save, render: render, uid: uid, ymd: ymd, parseYmd: parseYmd, shiftDate: shiftDate, dayDiff: dayDiff, addDays: addDays,
-    occursOn: occursOn, eventsOn: eventsOn, catById: catById, hm: hm, toast: toast, mark: mark, normRep: normRep, remMinutes: remMinutes,
+    remNote: remNote, occursOn: occursOn, eventsOn: eventsOn, catById: catById, hm: hm, toast: toast, mark: mark, normRep: normRep, remMinutes: remMinutes,
     isKey: isKey, hooks: hooks, extra: extra, DOW_SHORT: DOW_SHORT, MON_GEN: MON_GEN, MON_SHORT: MON_SHORT, setAnchor: setAnchor,
     openSettings: function () { buildSettings(); if (!setDlg.open) setDlg.showModal(); }, h: h, dropMaster: dropMaster, editing: function () { return editing; }, openEvent: openEvent, leaveBuf: leaveBuf, obsUri: obsUri, go: go
   };

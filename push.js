@@ -43,8 +43,9 @@
           var dd = C.parseYmd(key), st = new Date(dd.getFullYear(), dd.getMonth(), dd.getDate(), Math.floor(e.start / 60), e.start % 60).getTime();
           var lat = st - (e.travel + C.leaveBuf()) * 60000;
           if (lat >= now - 10 * 60000 && st > now) {
-            items.push({ k: e._m.id + '|' + key + '|leave|' + e.travel, at: lat, title: 'Пора выходить',
-              body: e.title + ' в ' + C.hm(e.start) + ' · дорога ' + e.travel + ' мин · выйти в ' + C.hm(e.start - e.travel) });
+            var where = e.place ? C.remNote(e).body.split(' · ').pop() : '';
+            items.push({ k: e._m.id + '|' + key + '|leave|' + e.travel, at: lat, title: 'Пора выходить: ' + e.title,
+              body: 'Начало в ' + C.hm(e.start) + (where ? ' · ' + where : '') + ' · дорога ' + e.travel + ' мин' });
           }
         }
         var rem = C.remMinutes(e);
@@ -54,11 +55,8 @@
         var startTs = new Date(d.getFullYear(), d.getMonth(), d.getDate(), e.allDay ? 9 : Math.floor(e.start / 60), e.allDay ? 0 : e.start % 60).getTime();
         var at = startTs - rem * 60000;
         if (at < now - 10 * 60000) return;
-        items.push({
-          k: e._m.id + '|' + key + '|' + rem, at: at,
-          title: (C.isKey(e) ? '⚑ ' : '') + e.title,
-          body: e.allDay ? 'Весь день, ' + key : (rem <= 0 ? 'Начинается сейчас' : 'Через ' + rem + ' мин') + ', в ' + C.hm(e.start)
-        });
+        var n = C.remNote(e, e.allDay ? null : rem);
+        items.push({ k: e._m.id + '|' + key + '|' + rem, at: at, title: n.title, body: n.body });
       });
     }
     items.sort(function (a, b) { return a.at - b.at; });
@@ -67,6 +65,8 @@
   function sync(force) {
     if (!isOn() || !navigator.onLine) return Promise.resolve();
     var items = buildItems(), hash = JSON.stringify(items);
+    // копия расписания для сервис-воркера: текст покажется, даже если сервер не ответит
+    try { caches.open('push-cfg').then(function (c) { return c.put(new URL('push-items.json', location.href).href, new Response(hash)); }); } catch (e) { /* без копии */ }
     if (!force && hash === lastHash) return Promise.resolve();
     return post('/schedule', { id: myId(), items: items }).then(function () { lastHash = hash; lastErr = ''; setStatus(describe()); }).catch(function (e) {
       if (e.status === 404) { lastErr = 'Сервер не знает этого устройства. Выключите и включите push заново.'; }
