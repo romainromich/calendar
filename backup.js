@@ -25,6 +25,7 @@
   }
   function parse(text) {
     var raw = JSON.parse(text);
+    if (raw && raw.app === 'calendar' && raw.locked) return { at: raw.exportedAt ? Date.parse(raw.exportedAt) : 0, locked: raw.locked };
     var data = raw && raw.app === 'calendar' && raw.data ? raw.data : raw;       // старые копии лежат без обёртки
     if (!data || typeof data !== 'object' || !Array.isArray(data.events)) throw new Error('bad');
     return { at: raw.exportedAt ? Date.parse(raw.exportedAt) : 0, data: data };
@@ -96,29 +97,55 @@
     if (snap) t.querySelector('.grow').append(h('button', { type: 'button', class: 'btn', style: 'margin-top:8px', onclick: function () { apply(snap.data, 'replace'); t.remove(); C.toast('Вернул данные, как были.'); refreshAll(); } }, 'Отменить'));
   }
 
+  /* ---------- шифрование файла паролем (PBKDF2 + AES-GCM) ---------- */
+  var ITER = 310000, te = new TextEncoder(), td = new TextDecoder();
+  function b64(a) { var s = '', u = new Uint8Array(a); for (var i = 0; i < u.length; i += 8192) s += String.fromCharCode.apply(null, u.subarray(i, i + 8192)); return btoa(s); }
+  function unb64(s) { var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  function passKey(pass, salt, iter) {
+    return crypto.subtle.importKey('raw', te.encode(pass), 'PBKDF2', false, ['deriveKey']).then(function (k) {
+      return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: salt, iterations: iter, hash: 'SHA-256' }, k, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    });
+  }
+  function lock(obj, pass) {
+    var salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+    return passKey(pass, salt, ITER).then(function (k) { return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, k, te.encode(JSON.stringify(obj))); })
+      .then(function (ct) { return { enc: 'pbkdf2-aes-gcm', iter: ITER, salt: b64(salt), iv: b64(iv), data: b64(ct) }; });
+  }
+  function unlock(raw, pass) {
+    return passKey(pass, unb64(raw.salt), raw.iter || ITER)
+      .then(function (k) { return crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(raw.iv) }, k, unb64(raw.data)); })
+      .then(function (pt) { return JSON.parse(td.decode(pt)); });
+  }
+
   /* ---------- файл ---------- */
+  var filePass = '';                      // пароль на копию: только в памяти, пока открыты настройки
   function makeFile() {
-    var d = new Date();
-    return {
-      json: JSON.stringify({ app: 'calendar', v: 2, exportedAt: d.toISOString(), data: pack(S()) }, null, 2),
-      name: 'calendar-' + C.ymd(d) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + '.json'
-    };
+    var d = new Date(), name = 'calendar-' + C.ymd(d) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + (filePass ? '-locked' : '') + '.json';
+    var body = { app: 'calendar', v: 2, exportedAt: d.toISOString(), data: pack(S()) };
+    if (!filePass) return Promise.resolve({ json: JSON.stringify(body, null, 2), name: name });
+    return lock(body.data, filePass).then(function (enc) {
+      return { json: JSON.stringify({ app: 'calendar', v: 3, exportedAt: body.exportedAt, locked: enc }), name: name };
+    });
   }
   function markBackup() { S().settings.lastBackup = Date.now(); C.save(); renderStatus(); }
   function download() {
-    var f = makeFile(), url = URL.createObjectURL(new Blob([f.json], { type: FILE_TYPE }));
-    var a = h('a', { href: url, download: f.name });
-    document.body.append(a); a.click(); a.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
-    markBackup();
-    C.toast('Файл ' + f.name + ' сохранён. Лучше положить его в облако или отправить себе.');
+    return makeFile().then(function (f) {
+      var url = URL.createObjectURL(new Blob([f.json], { type: FILE_TYPE }));
+      var a = h('a', { href: url, download: f.name });
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+      markBackup();
+      C.toast('Файл ' + f.name + ' сохранён' + (filePass ? ' и защищён паролем' : '') + '. Лучше положить его в облако или отправить себе.');
+    });
   }
   function canShare() {
     try { return !!(navigator.canShare && navigator.canShare({ files: [new File(['{}'], 'c.json', { type: FILE_TYPE })] })); } catch (e) { return false; }
   }
   function share() {
-    var f = makeFile(), file = new File([f.json], f.name, { type: FILE_TYPE });
-    navigator.share({ files: [file], title: 'Копия календаря' }).then(markBackup).catch(function (e) { if (!e || e.name !== 'AbortError') download(); });
+    makeFile().then(function (f) {
+      var file = new File([f.json], f.name, { type: FILE_TYPE });
+      return navigator.share({ files: [file], title: 'Копия календаря' }).then(markBackup);
+    }).catch(function (e) { if (!e || e.name !== 'AbortError') download(); });
   }
 
   /* ---------- импорт ---------- */
@@ -131,10 +158,27 @@
     r.onload = function () {
       var p;
       try { p = parse(r.result); } catch (e) { C.toast('Не удалось прочитать файл: это не копия календаря.'); return; }
-      askImport(p);
+      if (p.locked) askPass(p); else askImport(p);
     };
     r.readAsText(f);
   });
+  function askPass(p) {
+    var inp = h('input', { type: 'password', autocomplete: 'off', placeholder: 'Пароль копии' }), err = h('div', { class: 'mute small', role: 'alert' });
+    var dlg = h('dialog', null);
+    function close() { dlg.close(); dlg.remove(); }
+    function go() {
+      err.textContent = 'Расшифровываю…';
+      unlock(p.locked, inp.value).then(function (data) {
+        if (!data || !Array.isArray(data.events)) throw new Error('bad');
+        close(); askImport({ at: p.at, data: data });
+      }).catch(function () { err.textContent = 'Пароль не подходит.'; inp.select(); });
+    }
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+    dlg.append(h('h2', null, 'Копия защищена паролем'), h('label', { class: 'field' }, 'Пароль', inp), err,
+      h('div', { class: 'dlg-actions' }, h('button', { type: 'button', class: 'btn primary', onclick: go }, 'Открыть'), h('button', { type: 'button', class: 'btn', onclick: close }, 'Отмена')));
+    dlg.addEventListener('cancel', function () { setTimeout(function () { dlg.remove(); }, 0); });
+    document.body.append(dlg); dlg.showModal(); inp.focus();
+  }
   function line(label, c) {
     return h('div', { style: 'display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--line)' },
       h('span', { class: 'mute' }, label),
@@ -208,9 +252,15 @@
       h('button', { type: 'button', class: 'btn primary', onclick: download }, 'Сохранить копию в файл'),
       canShare() ? h('button', { type: 'button', class: 'btn', onclick: share }, 'Отправить…') : null,
       h('button', { type: 'button', class: 'btn', onclick: function () { input.click(); } }, 'Загрузить из файла'));
+    var passIn = h('input', { type: 'password', autocomplete: 'new-password', placeholder: 'Пароль (не меньше 8 символов)', hidden: true,
+      oninput: function () { filePass = passIn.value.length >= 8 ? passIn.value : ''; passNote.textContent = passIn.value && !filePass ? 'Пароль короткий: нужно хотя бы 8 символов.' : filePass ? 'Файл будет зашифрован. Без пароля его не открыть, восстановить пароль нельзя.' : ''; } });
+    var passNote = h('div', { class: 'mute small' });
+    var passBox = h('label', { class: 'chk', style: 'display:flex;align-items:center;gap:8px;margin:10px 0 6px' },
+      h('input', { type: 'checkbox', onchange: function (e) { passIn.hidden = !e.target.checked; if (!e.target.checked) { passIn.value = ''; filePass = ''; passNote.textContent = ''; } else passIn.focus(); } }),
+      'Защитить файл паролем');
     var sec = h('div', { class: 'set-sec' }, h('h3', null, 'Резервная копия и перенос'),
       h('p', { class: 'mute small', style: 'margin-top:0' }, 'Файл содержит события, задачи, привычки, календари и внешний вид. Так можно перенести всё на другой телефон или компьютер. Вход в Google и уведомления на каждом устройстве настраиваются отдельно.'),
-      statusEl, btns, persistEl,
+      statusEl, passBox, passIn, passNote, h('div', { style: 'height:8px' }), btns, persistEl,
       h('details', { style: 'margin-top:8px' }, h('summary', null, 'Автокопии на этом устройстве'),
         h('p', { class: 'mute small' }, 'Раз в день я сохраняю копию в браузере (последние ' + MAX_SNAPS + '). Она спасает от случайного удаления, но не от очистки данных сайта: для этого нужен файл.'), snapBox));
     refreshAll();

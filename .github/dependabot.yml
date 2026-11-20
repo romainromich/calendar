@@ -1,0 +1,12 @@
+# Обновления зависимостей: раз в неделю GitHub предложит pull request,
+# если вышли новые версии действий сборки или библиотек Android.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: gradle
+    directory: /android
+    schedule:
+      interval: weekly

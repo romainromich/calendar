@@ -13,6 +13,8 @@ const MAX_DATA = 4 * 1024 * 1024;   // зашифрованные данные �
 /* Защита. Код доступа задаётся секретом OWNER в настройках воркера (Settings → Variables and Secrets).
    Пока секрета нет, сервер работает по-старому, чтобы обновление ничего не сломало. */
 const TOKEN_HDR = 'X-Cal-Token';
+// push отправляется только на серверы браузеров, а не на произвольный адрес
+const PUSH_HOSTS = /^https:\/\/(fcm\.googleapis\.com|android\.googleapis\.com|updates\.push\.services\.mozilla\.com|[a-z0-9-]+\.notify\.windows\.com|web\.push\.apple\.com)\//;
 const LIMIT = { n: 300, ms: 10 * 60 * 1000 };   // записей с одного адреса за 10 минут
 const hits = new Map();
 function limited(req) {
@@ -160,9 +162,11 @@ async function handle(req, env) {
 
   if (url.pathname === '/subscribe') {
     const sub = body && body.sub;
-    if (!sub || typeof sub.endpoint !== 'string' || !/^https:\/\//.test(sub.endpoint)) return json({ error: 'sub' }, 400);
+    if (!sub || typeof sub.endpoint !== 'string' || sub.endpoint.length > 1000 || !PUSH_HOSTS.test(sub.endpoint)) return json({ error: 'sub' }, 400);
+    const keys = sub.keys || {};
+    if (typeof keys.p256dh !== 'string' || typeof keys.auth !== 'string' || keys.p256dh.length > 200 || keys.auth.length > 100) return json({ error: 'keys' }, 400);
     const id = await sha(sub.endpoint);
-    s.subs[id] = { sub: { endpoint: sub.endpoint, keys: sub.keys || {} }, sch: (s.subs[id] && s.subs[id].sch) || [], fired: (s.subs[id] && s.subs[id].fired) || {} };
+    s.subs[id] = { sub: { endpoint: sub.endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } }, sch: (s.subs[id] && s.subs[id].sch) || [], fired: (s.subs[id] && s.subs[id].fired) || {} };
     if (Object.keys(s.subs).length > 20) return json({ error: 'limit' }, 429);
     await save(env, s);
     return json({ id });

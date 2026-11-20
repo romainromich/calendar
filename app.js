@@ -105,7 +105,16 @@
   var hooks = { save: [] };
   var extra = [];
   var S = load();
+  cleanColors();
+  /* цвета попадают в стили: из файла копии, облака или Google принимаем только #rrggbb */
+  function cleanColors() {
+    var HEX = /^#[0-9a-f]{3}(?:[0-9a-f]{3})?(?:[0-9a-f]{2})?$/i;
+    (S.cats || []).forEach(function (c) { if (!HEX.test(c.color || '')) c.color = '#5EEAD4'; });
+    var sc = S.settings && S.settings.colors;
+    if (sc) Object.keys(sc).forEach(function (k) { if (!HEX.test(sc[k] || '')) sc[k] = PRESETS.night.c[k] || '#0E1116'; });
+  }
   function save() {
+    cleanColors();
     try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* хранилище недоступно */ }
     hooks.save.forEach(function (f) { try { f(); } catch (e) { /* хук не должен ломать сохранение */ } });
   }
