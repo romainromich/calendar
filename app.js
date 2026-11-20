@@ -371,7 +371,8 @@
         while (lanes[i] !== undefined && lanes[i] > e.start) i++;
         lanes[i] = e.end; e._lane = i;
       });
-      cluster.forEach(function (e) { e._lanes = lanes.length; });
+      var cid = out.length;
+      cluster.forEach(function (e) { e._lanes = lanes.length; e._cl = cid; });
       out = out.concat(cluster); cluster = [];
     }
     evs.forEach(function (src) {
@@ -381,6 +382,21 @@
     });
     flush();
     return out;
+  }
+
+  /* выбор из нескольких событий, слитых в одну плашку */
+  function pickEvent(list, d) {
+    var dlg = h('dialog', { class: 'pick-dlg' });
+    function close() { dlg.close(); dlg.remove(); }
+    dlg.append(h('h2', null, cap(DOW_LONG[d.getDay()]) + ', ' + d.getDate() + ' ' + MON_GEN[d.getMonth()]),
+      h('div', { class: 'pick-list' }, list.map(function (e) {
+        return h('button', { type: 'button', class: 'mo-row' + (isKey(e) ? ' key' : ''), style: '--c:' + catById(e.cat).color, onclick: function () { close(); openEvent(e); } },
+          h('span', { class: 'tm' }, hm(e.start) + '–' + hm(e.end)), h('span', { class: 'tt' }, evLabel(e) + (e._m.rep ? ' ↻' : '')));
+      })),
+      h('div', { class: 'dlg-actions' }, h('button', { type: 'button', class: 'btn', onclick: close }, 'Закрыть')));
+    dlg.addEventListener('cancel', function () { setTimeout(function () { dlg.remove(); }, 0); });
+    dlg.addEventListener('click', function (ev) { if (ev.target === dlg) close(); });
+    document.body.append(dlg); dlg.showModal();
   }
 
   function adChip(e) {
@@ -414,9 +430,25 @@
         h('div', { class: 'load' }, load)));
       var col = h('div', { class: 'col' + (isToday ? ' today' : ''), 'data-date': key, style: 'height:' + (he - hs) * hh + 'px',
         onpointerdown: function (ev) { startCreate(ev, col, key); } });
-      layoutDay(evs).forEach(function (L) {
+      // телефон, неделя: пересекающиеся события в узкой колонке — одной плашкой со списком, а не полосками по букве
+      var narrow = isMobile() && days.length > 3, groups = {};
+      var laid = layoutDay(evs).filter(function (L) { return !(L.ev.end <= hs * 60 || L.ev.start >= he * 60); });
+      if (narrow) laid = laid.filter(function (L) {
+        if (L._lanes < 2) return true;
+        (groups[L._cl] = groups[L._cl] || []).push(L.ev);
+        return false;
+      });
+      Object.keys(groups).forEach(function (k) {
+        var g = groups[k], st = Math.min.apply(null, g.map(function (e) { return e.start; })), en = Math.max.apply(null, g.map(function (e) { return e.end; }));
+        var top = (Math.max(st, hs * 60) - hs * 60) / 60 * hh, height = (Math.min(en, he * 60) - Math.max(st, hs * 60)) / 60 * hh - 2;
+        col.append(h('button', { type: 'button', class: 'ev ev-group' + (g.some(isKey) ? ' key' : ''), style: '--c:' + catById(g[0].cat).color + ';top:' + (top + 1) + 'px;height:' + Math.max(height, 34) + 'px;left:2px;width:calc(100% - 4px)',
+          'aria-label': g.length + ' события: ' + g.map(function (e) { return e.title + ' ' + hm(e.start); }).join(', '),
+          onpointerdown: function (ev) { ev.stopPropagation(); }, onclick: function (ev) { ev.stopPropagation(); pickEvent(g, d); } },
+          h('em', { class: 'ev-n' }, g.length),
+          g.map(function (e) { return h('span', { class: 'ev-li', style: '--c:' + catById(e.cat).color }, evLabel(e)); })));
+      });
+      laid.forEach(function (L) {
         var e = L.ev;
-        if (e.end <= hs * 60 || e.start >= he * 60) return;
         var top = (Math.max(e.start, hs * 60) - hs * 60) / 60 * hh;
         var height = (Math.min(e.end, he * 60) - Math.max(e.start, hs * 60)) / 60 * hh - 2;
         var w = 100 / L._lanes;
