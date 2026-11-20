@@ -164,5 +164,5 @@
     dlg.showModal();
   }
 
-  window.CalPrep = { open: open, _plans: { even: planEven, dense: planDense } };
+  window.CalPrep = { open: open, pick: pick, nowFrom: nowFrom, _plans: { even: planEven, dense: planDense } };
 })();

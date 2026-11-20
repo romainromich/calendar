@@ -1,11 +1,14 @@
 /* Сервер push-уведомлений для календаря (Cloudflare Worker).
    Хранит подписки и расписание напоминаний в KV (привязка с именем KV),
    раз в минуту (Cron Trigger) отправляет push без содержимого; сервис-воркер
-   приложения забирает текст через /due и показывает уведомление. */
+   приложения забирает текст через /due и показывает уведомление.
+   Ещё хранит зашифрованную копию данных календаря для синхронизации устройств
+   (/data): сервер видит только хэш ключа и шифротекст, расшифровать его не может. */
 const ALLOWED = ['https://romainromich.github.io', 'http://localhost:8080'];
 const SUBJECT = 'https://romainromich.github.io/calendar/';
 const WINDOW = 15 * 60 * 1000;      // опоздавшие больше чем на 15 минут не отправляются
 const MAX_ITEMS = 150;
+const MAX_DATA = 4 * 1024 * 1024;   // зашифрованные данные одного календаря
 
 const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const text = (s, n) => String(s == null ? '' : s).slice(0, n);
@@ -106,6 +109,24 @@ async function handle(req, env) {
     const items = s.due[id] || [];
     if (items.length) { delete s.due[id]; await save(env, s); }
     return json({ items });
+  }
+  if (url.pathname === '/data') {
+    // синхронизация: id — хэш секретного ключа (64 hex), data — шифротекст
+    const id = url.searchParams.get('id') || '';
+    if (!/^[0-9a-f]{64}$/.test(id)) return json({ error: 'id' }, 400);
+    const k = 'd:' + id;
+    const cur = (await env.KV.get(k, 'json')) || { rev: 0, data: null, t: 0 };
+    if (req.method === 'GET') return json(cur);
+    if (req.method !== 'POST') return json({ error: 'method' }, 405);
+    const raw = await req.text();
+    if (raw.length > MAX_DATA) return json({ error: 'size' }, 413);
+    let b;
+    try { b = JSON.parse(raw); } catch (e) { return json({ error: 'json' }, 400); }
+    if (typeof b.data !== 'string' || typeof b.rev !== 'number') return json({ error: 'body' }, 400);
+    if (b.rev !== cur.rev) return json({ error: 'conflict', ...cur }, 409);   // кто-то успел раньше: клиент сольёт и повторит
+    const next = { rev: cur.rev + 1, data: b.data, t: Date.now() };
+    await env.KV.put(k, JSON.stringify(next));
+    return json({ rev: next.rev, t: next.t });
   }
   if (req.method !== 'POST') return json({ error: 'method' }, 405);
   let body;

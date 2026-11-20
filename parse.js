@@ -46,11 +46,42 @@
     return t;
   }
 
+  /* набранный текст: «15.30» -> «15:30» в роли времени, «10 утра» без предлога */
+  function normalizeTyped(text) {
+    var t = String(text || '');
+    // диапазон с точками: «15.30-17.00»
+    t = t.replace(new RegExp(L + '(\\d{1,2})\\.(\\d{2})\\s*([-–—])\\s*(\\d{1,2})[.:](\\d{2})' + R, 'gu'), function (m, a, b, d, c, e) {
+      return +a <= 23 && +b <= 59 && +c <= 24 && +e <= 59 ? a + ':' + b + d + c + ':' + e : m;
+    });
+    // «в 15.30», «до 23.59»
+    t = t.replace(new RegExp(L + '(в|с|к|до)\\s+(\\d{1,2})\\.(\\d{2})' + R, 'giu'), function (m, p, a, b) {
+      return +a <= 23 && +b <= 59 ? p + ' ' + a + ':' + b : m;
+    });
+    // «15.30» без предлога, если датой быть не может (месяц > 12)
+    t = t.replace(new RegExp(L + '(\\d{1,2})\\.(\\d{2})' + R + '(?!\\.\\d)', 'gu'), function (m, a, b) {
+      return +b > 12 && +a <= 23 && +b <= 59 ? a + ':' + b : m;
+    });
+    // «10 утра» без предлога («2 дня» без предлога — это срок, не время)
+    t = t.replace(new RegExp(L + '(\\d{1,2})(?::(\\d{2}))?\\s+(утра|вечера|ночи)' + R, 'giu'), function (m, hs, mm, q, off, str) {
+      if (/(?:в|с|к|до|через)\s+$/iu.test(str.slice(0, off))) return m;
+      return 'в ' + m;
+    });
+    return normalizeSpoken(t);
+  }
+
+  var WD = '(понедельник|вторник|сред[ауые]|четверг|пятниц[ауые]|суббот[ауые]|воскресень[еяю])';
+  function wdIdx(w) {
+    w = w.toLowerCase();
+    return w.indexOf('пон') === 0 ? 1 : w.indexOf('вт') === 0 ? 2 : w.indexOf('сред') === 0 ? 3 : w.indexOf('чет') === 0 ? 4 : w.indexOf('пят') === 0 ? 5 : w.indexOf('суб') === 0 ? 6 : 0;
+  }
+  function round5(m) { return Math.ceil(m / 5) * 5; }
+
   function parseQuick(text, now, cats, defaultCat, opts) {
-    if (opts && opts.spoken) text = normalizeSpoken(text);
+    text = opts && opts.spoken ? normalizeSpoken(text) : normalizeTyped(text);
     var s = ' ' + text + ' ';
     var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    var res = { date: ymd(today), start: 9 * 60, end: null, cat: defaultCat || (cats[0] && cats[0].id), hasDate: false, hasTime: false };
+    var res = { date: ymd(today), start: 9 * 60, end: null, cat: defaultCat || (cats[0] && cats[0].id), hasDate: false, hasTime: false, rep: null, deadline: false };
+    var nowM = now.getHours() * 60 + now.getMinutes();
 
     function take(re, fn) {
       var g = new RegExp(re.source, re.flags.indexOf('g') < 0 ? re.flags + 'g' : re.flags);
@@ -64,8 +95,44 @@
       return false;
     }
 
+    // ---- повтор
+    take(new RegExp(L + '(?:каждый|каждую|каждое)\\s+(день|будний\\s+день|неделю|месяц|год)' + R, 'iu'), function (m) {
+      var w = m[1].toLowerCase();
+      res.rep = w === 'день' ? { type: 'daily', interval: 1, until: '' } : w.indexOf('будн') === 0 ? { type: 'weekly', interval: 1, days: [1, 2, 3, 4, 5], until: '' }
+        : w === 'неделю' ? { type: 'weekly', interval: 1, until: '' } : w === 'месяц' ? { type: 'monthly', interval: 1, until: '' } : { type: 'yearly', interval: 1, until: '' };
+    }) ||
+    take(new RegExp(L + '(?:ежедневно|по\\s+будням)' + R, 'iu'), function (m) {
+      res.rep = /будн/i.test(m[0]) ? { type: 'weekly', interval: 1, days: [1, 2, 3, 4, 5], until: '' } : { type: 'daily', interval: 1, until: '' };
+    }) ||
+    take(new RegExp(L + '(?:(?:каждый|каждую|каждое)\\s+' + WD + '(?:\\s*(?:,|и)\\s*' + WD + ')?' + '|по\\s+(понедельникам|вторникам|средам|четвергам|пятницам|субботам|воскресеньям)(?:\\s*(?:,|и)\\s*(понедельникам|вторникам|средам|четвергам|пятницам|субботам|воскресеньям))?)' + R, 'iu'), function (m) {
+      var days = [m[1], m[2], m[3], m[4]].filter(Boolean).map(wdIdx);
+      days = days.filter(function (d, i) { return days.indexOf(d) === i; }).sort();
+      res.rep = { type: 'weekly', interval: 1, days: days, until: '' };
+      var diff = 99;
+      days.forEach(function (d) { var x = (d - today.getDay() + 7) % 7; if (x < diff) diff = x; });
+      res.date = ymd(addDays(today, diff)); res.hasDate = true;
+    });
+
+    // ---- «через …»
+    var relTime = null;
+    take(new RegExp(L + 'через\\s+(?:(\\d+|пару|полчаса)\\s*)?(минут\\p{L}*|мин|час\\p{L}*|ч|дн\\p{L}*|день|недел\\p{L}*|месяц\\p{L}*)?' + R, 'iu'), function (m) {
+      var nRaw = (m[1] || '').toLowerCase(), u = (m[2] || '').toLowerCase();
+      if (nRaw === 'полчаса') { relTime = 30; return; }
+      if (!u) return false;
+      var n = nRaw === 'пару' ? 2 : nRaw ? +nRaw : 1;
+      if (/^мин/.test(u)) relTime = n;
+      else if (/^ч|^час/.test(u)) relTime = n * 60;
+      else if (/^д/.test(u)) { res.date = ymd(addDays(today, n)); res.hasDate = true; }
+      else if (/^нед/.test(u)) { res.date = ymd(addDays(today, 7 * n)); res.hasDate = true; }
+      else { var d = new Date(today.getFullYear(), today.getMonth() + n, today.getDate()); res.date = ymd(d); res.hasDate = true; }
+    });
+    if (relTime != null) {
+      var at = round5(nowM + relTime);
+      res.date = ymd(addDays(today, Math.floor(at / 1440))); res.start = at % 1440; res.hasDate = true; res.hasTime = true;
+    }
+
     // ---- дата
-    take(new RegExp(L + 'послезавтра' + R, 'iu'), function () { res.date = ymd(addDays(today, 2)); res.hasDate = true; }) ||
+    if (!res.hasDate) take(new RegExp(L + 'послезавтра' + R, 'iu'), function () { res.date = ymd(addDays(today, 2)); res.hasDate = true; }) ||
     take(new RegExp(L + 'завтра' + R, 'iu'), function () { res.date = ymd(addDays(today, 1)); res.hasDate = true; }) ||
     take(new RegExp(L + 'сегодня' + R, 'iu'), function () { res.date = ymd(today); res.hasDate = true; }) ||
     take(new RegExp(L + '(\\d{1,2})\\s+(' + MONTHS.join('|') + ')(?:\\s+(\\d{4}))?' + R, 'iu'), function (m) {
@@ -85,9 +152,8 @@
       if (!m[3] && d < today) d = new Date(y + 1, mon, +m[1]);
       res.date = ymd(d); res.hasDate = true;
     }) ||
-    take(new RegExp(L + '(?:(?:в|во|на)\\s+)?(понедельник|вторник|сред[ауы]|четверг|пятниц[ауы]|суббот[ауы]|воскресень[ея])' + R, 'iu'), function (m) {
-      var w = m[1].toLowerCase();
-      var idx = w.indexOf('пон') === 0 ? 1 : w.indexOf('вт') === 0 ? 2 : w.indexOf('сред') === 0 ? 3 : w.indexOf('чет') === 0 ? 4 : w.indexOf('пят') === 0 ? 5 : w.indexOf('суб') === 0 ? 6 : 0;
+    take(new RegExp(L + '(?:(?:в|во|на)\\s+)?' + WD + R, 'iu'), function (m) {
+      var idx = wdIdx(m[1]);
       var diff = (idx - today.getDay() + 7) % 7;
       if (diff === 0) diff = 7;
       res.date = ymd(addDays(today, diff)); res.hasDate = true;
@@ -95,12 +161,17 @@
 
     // ---- время
     var explicitEnd = null, duration = null;
-    take(new RegExp(L + '(\\d{1,2}):(\\d{2})\\s*[-–—]\\s*(\\d{1,2}):(\\d{2})' + R, 'iu'), function (m) {
-      res.start = +m[1] * 60 + +m[2]; explicitEnd = +m[3] * 60 + +m[4]; res.hasTime = true;
+    if (!res.hasTime) take(new RegExp(L + '(?:с\\s+)?(\\d{1,2})(?::(\\d{2}))?\\s*[-–—]\\s*(\\d{1,2})(?::(\\d{2}))?' + R, 'iu'), function (m) {
+      if (!m[2] && !m[4] && !/^с/i.test(m[0])) return false;
+      if (+m[1] > 23 || +m[3] > 24) return false;
+      var a = +m[1] * 60 + (m[2] ? +m[2] : 0), b = +m[3] * 60 + (m[4] ? +m[4] : 0);
+      if (b <= a) return false;
+      res.start = a; explicitEnd = b; res.hasTime = true;
     });
+    var dueAt = null;
     take(new RegExp(L + 'до\\s+(\\d{1,2})(?::(\\d{2}))?' + R, 'iu'), function (m) {
       if (+m[1] > 24) return false;
-      explicitEnd = +m[1] * 60 + (m[2] ? +m[2] : 0);
+      dueAt = +m[1] * 60 + (m[2] ? +m[2] : 0);
     });
     if (!res.hasTime) {
       take(new RegExp(L + '(?:(?:в|с|к)\\s+)?(\\d{1,2}):(\\d{2})' + R, 'iu'), function (m) {
@@ -117,6 +188,11 @@
     }) ||
     take(new RegExp(L + '(?:на\\s+)?(\\d+)\\s*мин\\p{L}*' + R, 'iu'), function (m) { duration = +m[1]; });
 
+    if (dueAt != null) {
+      // «сдать лабу до 23:59»: без времени начала это срок, а не блок с 9 утра
+      if (res.hasTime && explicitEnd == null) explicitEnd = dueAt;
+      else if (!res.hasTime) { res.start = Math.min(dueAt, 24 * 60 - 1); res.hasTime = true; res.deadline = true; duration = duration || 15; }
+    }
     if (explicitEnd != null && explicitEnd > res.start) res.end = explicitEnd;
     else res.end = res.start + (duration || 60);
     if (res.end > 24 * 60) res.end = 24 * 60;
@@ -131,6 +207,7 @@
       return false;
     });
     if (tag) res.cat = tag;
+    else if (res.deadline && cats.some(function (c) { return c.id === 'deadline'; })) res.cat = 'deadline';
     else {
       var order = ['deadline', 'sport', 'study'];
       for (var k = 0; k < order.length; k++) {
@@ -147,7 +224,7 @@
     return res;
   }
 
-  var api = { parseQuick: parseQuick, normalizeSpoken: normalizeSpoken, ymd: ymd, addDays: addDays, pad: pad };
+  var api = { parseQuick: parseQuick, normalizeSpoken: normalizeSpoken, normalizeTyped: normalizeTyped, ymd: ymd, addDays: addDays, pad: pad };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CalParse = api;
 })(typeof window !== 'undefined' ? window : this);

@@ -242,6 +242,22 @@
   }
   function isKey(e) { return e.cat === 'deadline' || /коллок|экзамен|зач[её]т|дедлайн|контрольн|защит|сдать/i.test(e.title); }
   function evLabel(e) { return (isKey(e) ? '⚑ ' : '') + e.title; }
+  /* мягкие переносы для узких колонок недели: «Програм-мирование», а не «Программир / ование» */
+  function shy(text) {
+    var V = 'аеёиоуыэюяaeiouy', isV = function (c) { return V.indexOf(c.toLowerCase()) >= 0; }, isL = function (c) { return /[a-zа-яё]/i.test(c); };
+    return String(text).replace(/[A-Za-zА-Яа-яЁё]{7,}/g, function (w) {
+      var out = '', last = 0;
+      for (var i = 2; i < w.length - 2; i++) {
+        // слог: гласная | согласная + гласная, или две согласные пополам (кроме й, ь, ъ)
+        var a = w[i - 1], b = w[i], c = w[i + 1];
+        var ok = (isV(a) && !isV(b) && isV(c)) || (!isV(a) && !isV(b) && isL(a) && isV(c) && i - 1 > 0 && isV(w[i - 2]) && 'йьъЙЬЪ'.indexOf(a) < 0) || (isV(a) && isV(b));
+        if ('йьъЙЬЪ'.indexOf(b) >= 0) ok = false;
+        if (ok && i - last >= 2) { out += w.slice(last, i) + '\u00AD'; last = i; }
+      }
+      return out + w.slice(last);
+    });
+  }
+  function cap(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
   function isMobile() { return !!(window.matchMedia && window.matchMedia('(max-width: 760px)').matches); }
 
   /* ---------- тема ---------- */
@@ -309,14 +325,17 @@
     $('#miniTitle').textContent = MON_NOM[mini.getMonth()] + ' ' + mini.getFullYear();
     var root = $('#mini'), kids = [];
     for (var i = 0; i < 7; i++) kids.push(h('div', { class: 'dow' }, DOW_SHORT[(S.settings.weekStart + i) % 7]));
-    var first = startOfWeek(mini), range = viewRange(), td = today();
+    var first = startOfWeek(mini), ws = startOfWeek(anchor), range = [ws, addDays(ws, 6)], td = today();
     for (var j = 0; j < 42; j++) {
       (function (d) {
         var cls = [];
         if (d.getMonth() !== mini.getMonth()) cls.push('out');
         if (d >= range[0] && d <= range[1]) cls.push('inweek');
         if (sameDay(d, td)) cls.push('today');
-        kids.push(h('button', { type: 'button', class: cls.join(' '), onclick: function () { setAnchor(d); } }, d.getDate()));
+        if (sameDay(d, anchor)) cls.push('sel');
+        var n = eventsOn(ymd(d)).length;
+        if (n) cls.push('has');
+        kids.push(h('button', { type: 'button', class: cls.join(' '), title: n ? 'Событий: ' + n : '', onclick: function () { setAnchor(d); } }, d.getDate()));
       })(addDays(first, j));
     }
     root.replaceChildren.apply(root, kids);
@@ -396,7 +415,7 @@
           style: '--c:' + catById(e.cat).color + ';top:' + (top + 1) + 'px;height:' + Math.max(height, 18) + 'px;left:calc(' + (L._lane * w) + '% + 2px);width:calc(' + w + '% - 4px)',
           onpointerdown: function (evt) { startMove(evt, node, e); },
           onkeydown: function (evt) { if (evt.key === 'Enter' || evt.key === ' ') { evt.preventDefault(); openEvent(e); } } },
-          h('b', null, evLabel(e)), h('span', null, hm(e.start) + '–' + hm(e.end) + (e._m.rep ? ' ↻' : '') + (e.obs ? ' ↗' : '')),
+          h('b', null, shy(evLabel(e))), h('span', null, hm(e.start) + '–' + hm(e.end) + (e._m.rep ? ' ↻' : '') + (e.obs ? ' ↗' : '')),
           h('div', { class: 'rz', 'aria-hidden': 'true', onpointerdown: function (evt) { startResize(evt, node, e); } }));
         col.append(node);
       });
@@ -500,21 +519,57 @@
       }
     });
     flushHabits(1e9);
-    if (!evs.length && !habs.length) tl.append(h('div', { class: 'empty big' }, 'На этот день ничего нет.', h('br'), 'Нажми «+», чтобы добавить событие.'));
+    var evening = isToday && nm >= 15 * 60 && timed.every(function (e) { return e.end <= nm; });
+    if (evening) tl.append(eveningCard());
+    else if (!evs.length && !habs.length) tl.append(h('div', { class: 'empty big' }, 'На этот день ничего нет.', h('br'), 'Нажми «+», чтобы добавить событие.'));
     var adBox = ad.length ? h('div', { class: 'tl-ad' }, ad.map(adChip)) : null;
     return h('div', { class: 'ag-wrap' }, chip, strip, adBox, tl);
+  }
+
+  /* вечер: на сегодня всё закончилось — что осталось отметить и что завтра */
+  function eveningCard() {
+    var td = today(), tk = ymd(td), tm = addDays(td, 1), tmk = ymd(tm);
+    var left = S.habits.filter(function (hb) { return (S.log[hb.id] || []).indexOf(tk) < 0; });
+    var tmr = eventsOn(tmk).filter(function (e) { return !e.allDay; });
+    var first = tmr[0], dueT = S.tasks.filter(function (t) { return !t.done && t.due === tmk; });
+    var card = h('div', { class: 'eve' }, h('div', { class: 'eve-h' }, 'На сегодня всё'));
+    if (left.length) {
+      card.append(h('div', { class: 'eve-sec' }, h('div', { class: 'mute small' }, 'Не отмечено сегодня'),
+        h('div', { class: 'eve-habs' }, left.map(function (hb) {
+          return h('button', { type: 'button', class: 'eve-hab', onclick: function () { toggleHabit(hb, tk); } }, h('span', { class: 'ck' }), hb.title);
+        }))));
+    }
+    var sec = h('div', { class: 'eve-sec' }, h('div', { class: 'mute small' }, 'Завтра, ' + DOW_LONG[tm.getDay()].toLowerCase()));
+    if (first) {
+      var lv = first.travel ? Math.max(0, first.start - first.travel - leaveBuf()) : null;
+      sec.append(h('button', { type: 'button', class: 'eve-first', style: '--c:' + catById(first.cat).color, onclick: function () { setAnchor(tm); } },
+        h('b', null, hm(first.start)), h('span', null, first.title),
+        h('em', { class: 'mute small' }, (lv != null ? 'выйти в ' + hm(lv) + ' · ' : '') + 'всего событий: ' + tmr.length)));
+    } else sec.append(h('div', null, 'Событий нет — свободный день.'));
+    if (dueT.length) sec.append(h('div', { class: 'mute small', style: 'margin-top:6px' }, 'Срок завтра: ' + dueT.map(function (t) { return t.title; }).join(', ')));
+    card.append(sec);
+    return h('div', { class: 'tl-row eve-row' }, h('span', { class: 'dot', 'aria-hidden': 'true' }), card);
   }
 
   function renderMonth() {
     var first = startOfWeek(new Date(anchor.getFullYear(), anchor.getMonth(), 1)), td = today();
     var head = h('div', { class: 'mo-head' });
     for (var i = 0; i < 7; i++) head.append(h('div', null, DOW_SHORT[(S.settings.weekStart + i) % 7]));
-    var grid = h('div', { class: 'mo-grid' });
+    var grid = h('div', { class: 'mo-grid' }), mob = isMobile();
+    if (mob) grid.classList.add('mob');
     for (var j = 0; j < 42; j++) {
       (function (d) {
         var key = ymd(d), evs = eventsOn(key), cls = 'mo-cell';
         if (d.getMonth() !== anchor.getMonth()) cls += ' out';
         if (sameDay(d, td)) cls += ' today';
+        if (mob) {
+          // телефон: точки вместо обрезанных плашек, по нажатию — список дня под сеткой
+          if (sameDay(d, anchor)) cls += ' sel';
+          var dots = h('div', { class: 'mo-dots' }, evs.slice(0, 4).map(function (e) { return h('i', { class: isKey(e) ? 'key' : '', style: '--c:' + catById(e.cat).color }); }));
+          grid.append(h('button', { type: 'button', class: cls, 'data-date': key, 'aria-label': d.getDate() + ' ' + MON_GEN[d.getMonth()] + ', событий: ' + evs.length,
+            onclick: function () { setAnchor(d); } }, h('span', { class: 'n' }, d.getDate()), dots));
+          return;
+        }
         var cell = h('div', { class: cls, 'data-date': key, onclick: function () { openEvent(null, { date: key, start: 9 * 60, end: 10 * 60 }); } },
           h('button', { type: 'button', class: 'n', onclick: function (e) { e.stopPropagation(); S.settings.view = 'day'; save(); setAnchor(d); } }, d.getDate()));
         evs.slice(0, 3).forEach(function (e) {
@@ -528,11 +583,21 @@
         grid.append(cell);
       })(addDays(first, j));
     }
-    return h('div', null, head, grid);
+    if (!mob) return h('div', null, head, grid);
+    var ak = ymd(anchor), list = eventsOn(ak);
+    var day = h('div', { class: 'mo-day' },
+      h('div', { class: 'mo-day-h' }, h('b', null, cap(DOW_LONG[anchor.getDay()]) + ', ' + anchor.getDate() + ' ' + MON_GEN[anchor.getMonth()]),
+        h('button', { type: 'button', class: 'btn', onclick: function () { S.settings.view = 'day'; save(); render(); } }, 'Открыть день')),
+      list.length ? list.map(function (e) {
+        return h('button', { type: 'button', class: 'mo-row' + (isKey(e) ? ' key' : ''), style: '--c:' + catById(e.cat).color, onclick: function () { openEvent(e); } },
+          h('span', { class: 'tm' }, e.allDay ? 'весь день' : hm(e.start) + '–' + hm(e.end)), h('span', { class: 'tt' }, evLabel(e) + (e._m.rep ? ' ↻' : '')));
+      }) : h('div', { class: 'empty one' }, 'Событий нет'),
+      h('button', { type: 'button', class: 'btn wide mo-add', onclick: function () { openEvent(null, { date: ak, start: 9 * 60, end: 10 * 60 }); } }, '+ Событие на этот день'));
+    return h('div', null, head, grid, day);
   }
 
   function renderDeadlines() {
-    var root = $('#deadlines'), list = [], td = today(), nm = nowMin();
+    var root = $('#deadlines'), list = [], td = today(), nm = nowMin(), tdk = ymd(td);
     for (var i = 0; i < 45 && list.length < 8; i++) {
       (function (i) {
         var d = addDays(td, i);
@@ -543,15 +608,48 @@
         });
       })(i);
     }
-    if (!list.length) { root.replaceChildren(h('div', { class: 'empty' }, 'Дедлайнов и коллоквиумов в ближайшие 45 дней нет.')); return; }
+    // задачи со сроком: просроченные и на ближайшие 45 дней
+    S.tasks.forEach(function (t) {
+      if (t.done || !t.due) return;
+      var n = dayDiff(t.due, tdk);
+      if (n > 45) return;
+      list.push({ d: parseYmd(t.due), t: t, n: n });
+    });
+    list.sort(function (a, b) { return a.n - b.n || (a.e ? (a.e.allDay ? 0 : a.e.start) : 1441) - (b.e ? (b.e.allDay ? 0 : b.e.start) : 1441); });
+    list = list.slice(0, 8);
+    root.classList.toggle('is-empty', !list.length);
+    if (!list.length) { root.replaceChildren(h('div', { class: 'empty one' }, 'Ближайших дедлайнов нет')); return; }
     root.replaceChildren.apply(root, list.map(function (x) {
-      var when = x.n === 0 ? 'сегодня' : x.n === 1 ? 'завтра' : 'через ' + x.n + ' дн.';
+      var when = x.n < 0 ? 'просрочено' : x.n === 0 ? 'сегодня' : x.n === 1 ? 'завтра' : 'через ' + x.n + ' дн.';
+      var meta = DOW_SHORT[x.d.getDay()] + ' ' + x.d.getDate() + ' ' + MON_SHORT[x.d.getMonth()];
+      if (x.t) {
+        return h('button', { type: 'button', class: 'dl-row', style: '--c:var(--accent)', onclick: function () { S.settings.view = 'day'; save(); setAnchor(x.d); } },
+          h('span', { class: 'dl-when' + (x.n < 0 ? ' late' : x.n <= 1 ? ' soon' : '') }, when),
+          h('span', { class: 'dl-body' }, h('b', null, x.t.title), h('span', { class: 'mute small' }, meta + ' · задача')));
+      }
       return h('button', { type: 'button', class: 'dl-row', style: '--c:' + catById(x.e.cat).color, onclick: function () { S.settings.view = 'day'; save(); setAnchor(x.d); } },
         h('span', { class: 'dl-when' + (x.n <= 1 ? ' soon' : '') }, when),
         h('span', { class: 'dl-body' }, h('b', null, x.e.title),
-          h('span', { class: 'mute small' }, DOW_SHORT[x.d.getDay()] + ' ' + x.d.getDate() + ' ' + MON_SHORT[x.d.getMonth()] + (x.e.allDay ? '' : ', ' + hm(x.e.start)))));
+          h('span', { class: 'mute small' }, meta + (x.e.allDay ? '' : ', ' + hm(x.e.start)))));
     }));
   }
+
+  /* «Запланировать»: ставит задачу в ближайшее свободное окно до срока */
+  function scheduleTask(t) {
+    var CP = window.CalPrep, len = t.dur || 60, td = ymd(today());
+    if (!CP) return;
+    var last = t.due && t.due >= td ? t.due : shiftDate(td, 13), slot = null;
+    for (var k = td; k <= last && !slot; k = shiftDate(k, 1)) slot = CP.pick(k, len, len, CP.nowFrom(k));
+    if (!slot) { toast('До срока нет свободного окна на ' + durLabel(len) + '. Поставьте задачу вручную или сократите время.'); return; }
+    var snap = snapshot();
+    var cat = S.cats.some(function (c) { return c.id === 'study'; }) && KW_STUDY.test(t.title) ? 'study' : S.settings.defaultCat || S.cats[0].id;
+    S.events.push(mark({ id: uid(), title: t.title, date: slot.date, start: slot.start, end: slot.end, cat: cat, notes: '', rep: null, ex: [], task: t.id }));
+    t.planned = slot.date;
+    save(); render();
+    var d = parseYmd(slot.date);
+    offerUndo(snap, 'Запланировано: ' + DOW_SHORT[d.getDay()] + ' ' + d.getDate() + ' ' + MON_SHORT[d.getMonth()] + ', ' + hm(slot.start) + '–' + hm(slot.end));
+  }
+  var KW_STUDY = /пара|лекци|лаб|матан|линал|физик|англ|коллок|экзамен|семинар|учёб|учеб|курсов|презент|слайд/i;
 
   function checkBtn(on, label, round, fn) {
     return h('button', { type: 'button', class: 'chk' + (round ? ' round' : '') + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false', 'aria-label': label, onclick: fn }, on ? '✓' : '');
@@ -576,17 +674,20 @@
     if (!list.length) { root.replaceChildren(h('div', { class: 'empty' }, 'Задач пока нет.')); return; }
     root.replaceChildren.apply(root, list.map(function (t) {
       var due = '';
-      if (t.due) { var d = parseYmd(t.due); due = DOW_SHORT[d.getDay()] + ' ' + d.getDate() + ' ' + MON_SHORT[d.getMonth()] + (!t.done && t.due < td ? ' · просрочено' : ''); }
+      var late = !t.done && t.due && t.due < td;
+      if (t.due) { var d = parseYmd(t.due); due = DOW_SHORT[d.getDay()] + ' ' + d.getDate() + ' ' + MON_SHORT[d.getMonth()]; }
+      var planned = S.events.some(function (e) { return e.task === t.id; });
       return h('div', { class: 'item' },
         checkBtn(t.done, 'Выполнено: ' + t.title, false, function () { t.done = !t.done; t.doneAt = t.done ? ymd(new Date()) : undefined; save(); render(); }),
         h('div', { class: 'body' }, h('div', { class: 't' + (t.done ? ' done' : '') }, t.title),
-          h('div', { class: 'mute small tmeta' }, due ? due + ' · ' : '', (function () {
+          h('div', { class: 'mute small tmeta' }, due ? h('span', null, due) : '', late ? h('span', { class: 'late' }, 'просрочено') : '', (function () {
             var sel = h('select', { class: 'durchip', 'aria-label': 'Сколько времени займёт: ' + t.title, onchange: function () { t.dur = +sel.value || undefined; save(); renderTasks(); render(); } });
             durOptions(sel, t.dur || 0);
             if (!t.dur) sel.options[0].textContent = '+ время';
             return sel;
-          })())),
-        h('button', { type: 'button', class: 'x', 'aria-label': 'Удалить задачу', onclick: function () { S.tasks = S.tasks.filter(function (x) { return x !== t; }); save(); renderTasks(); } }, '✕'));
+          })(), t.done ? '' : h('button', { type: 'button', class: 'durchip plan-btn' + (planned ? ' on' : ''), title: 'Поставить в свободное окно календаря',
+            onclick: function () { scheduleTask(t); } }, planned ? '✓ в плане' : 'Запланировать'))),
+        h('button', { type: 'button', class: 'x', 'aria-label': 'Удалить задачу', onclick: function () { var snap = snapshot(); S.tasks = S.tasks.filter(function (x) { return x !== t; }); save(); render(); offerUndo(snap, 'Задача удалена'); } }, '✕'));
     }));
   }
 
@@ -601,21 +702,36 @@
     if (i >= 0) l.splice(i, 1); else l.push(key);
     save(); render();
   }
+  /* неделя привычки: 7 кружков, последний — сегодня; по нажатию отмечается день */
+  function habitWeek(hb) {
+    var td = today(), log = S.log[hb.id] || [], box = h('div', { class: 'hweek', role: 'group', 'aria-label': 'Последние 7 дней: ' + hb.title });
+    for (var i = 6; i >= 0; i--) {
+      (function (d) {
+        var k = ymd(d), on = log.indexOf(k) >= 0;
+        box.append(h('button', { type: 'button', class: 'hd' + (on ? ' on' : '') + (i === 0 ? ' td' : ''), 'aria-pressed': on ? 'true' : 'false',
+          title: DOW_SHORT[d.getDay()] + ' ' + d.getDate() + ' ' + MON_SHORT[d.getMonth()], 'aria-label': (on ? 'Сделано ' : 'Не сделано ') + DOW_SHORT[d.getDay()] + ' ' + d.getDate(),
+          onclick: function () { toggleHabit(hb, k); } }, h('i', null), h('span', null, DOW_SHORT[d.getDay()].slice(0, 2))));
+      })(addDays(td, -i));
+    }
+    return box;
+  }
+  function habitTime(hb) {
+    var inp = h('input', { type: 'time', class: 'hab-at-in', value: hb.at != null ? hm(hb.at) : '', tabindex: '-1', 'aria-hidden': 'true',
+      onchange: function () { var m = /^(\d{1,2}):(\d{2})$/.exec(inp.value); hb.at = m ? +m[1] * 60 + +m[2] : undefined; save(); render(); } });
+    return h('span', { class: 'hab-at-wrap' }, inp, h('button', { type: 'button', class: 'durchip hab-at' + (hb.at != null ? ' set' : ''), title: 'Время в линии дня (необязательно)',
+      'aria-label': 'Время привычки: ' + hb.title, onclick: function () { try { inp.showPicker(); } catch (e) { inp.focus(); inp.click(); } } }, hb.at != null ? hm(hb.at) : '+ время'));
+  }
   function renderHabits() {
     var root = $('#habits'), td = ymd(today());
     if (!S.habits.length) { root.replaceChildren(h('div', { class: 'empty' }, 'Привычек пока нет.')); return; }
     root.replaceChildren.apply(root, S.habits.map(function (hb) {
-      var on = (S.log[hb.id] || []).indexOf(td) >= 0;
+      var on = (S.log[hb.id] || []).indexOf(td) >= 0, st = streak(hb.id);
       return h('div', { class: 'habit' + (on ? ' on' : '') },
         checkBtn(on, 'Сегодня сделано: ' + hb.title, true, function () { toggleHabit(hb, td); }),
-        h('span', { class: 't' }, hb.title),
-        (function () {
-          var inp = h('input', { type: 'time', class: 'durchip hab-at', value: hb.at != null ? hm(hb.at) : '', 'aria-label': 'Время привычки: ' + hb.title, title: 'Время в линии дня (необязательно)',
-            onchange: function () { var m = /^(\d{1,2}):(\d{2})$/.exec(inp.value); hb.at = m ? +m[1] * 60 + +m[2] : undefined; save(); render(); } });
-          return inp;
-        })(),
-        h('span', { class: 'mute small' }, 'серия ' + streak(hb.id)),
-        h('button', { type: 'button', class: 'x', 'aria-label': 'Удалить привычку', style: 'border:0;background:transparent;color:var(--mute)', onclick: function () {
+        h('div', { class: 'hb-body' },
+          h('div', { class: 'hb-top' }, h('span', { class: 't', title: hb.title }, hb.title), st > 1 ? h('span', { class: 'hb-st', title: 'Серия дней подряд' }, '🔥 ' + st) : null, habitTime(hb)),
+          h('div', { class: 'hb-bot' }, habitWeek(hb))),
+        h('button', { type: 'button', class: 'x hb-x', 'aria-label': 'Удалить привычку', onclick: function () {
           if (!confirm('Удалить привычку «' + hb.title + '» вместе с историей?')) return;
           S.habits = S.habits.filter(function (x) { return x !== hb; }); delete S.log[hb.id]; save(); renderHabits();
         } }, '✕'));
@@ -623,15 +739,21 @@
   }
 
   function renderLoad() {
-    var s = startOfWeek(anchor), root = $('#load'), kids = [];
+    var s = startOfWeek(anchor), root = $('#load'), days = [], max = 0, total = 0;
     for (var i = 0; i < 7; i++) {
-      var d = addDays(s, i), key = ymd(d);
-      var mins = eventsOn(key).filter(function (e) { return !e.allDay; }).reduce(function (a, e) { return a + (e.end - e.start); }, 0);
-      kids.push(h('div', { title: Math.round(mins / 6) / 10 + ' ч' },
-        h('i', { class: sameDay(d, anchor) ? 'cur' : '', style: 'height:' + Math.max(3, Math.min(56, mins / 60 * 9)) + 'px' }),
-        h('span', null, DOW_SHORT[d.getDay()])));
+      var d = addDays(s, i);
+      var mins = eventsOn(ymd(d)).filter(function (e) { return !e.allDay; }).reduce(function (a, e) { return a + (e.end - e.start); }, 0);
+      days.push({ d: d, m: mins }); max = Math.max(max, mins); total += mins;
     }
-    root.replaceChildren(h('div', { class: 'bars' }, kids));
+    var top = Math.max(240, max);
+    function hrs(m) { var v = Math.round(m / 6) / 10; return String(v).replace('.', ','); }
+    var kids = days.map(function (x) {
+      return h('div', { title: hrs(x.m) + ' ч' },
+        h('em', null, x.m ? hrs(x.m) : ''),
+        h('i', { class: (sameDay(x.d, anchor) ? 'cur' : '') + (x.m ? '' : ' zero'), style: 'height:' + (x.m ? Math.max(4, Math.round(x.m / top * 44)) : 2) + 'px' }),
+        h('span', null, DOW_SHORT[x.d.getDay()]));
+    });
+    root.replaceChildren(h('div', { class: 'bars' }, kids), h('div', { class: 'mute small load-sum' }, total ? 'Всего ' + hrs(total) + ' ч, в среднем ' + hrs(total / 7) + ' ч в день' : 'На этой неделе событий нет'));
   }
 
   /* ---------- изменение событий и повторов ---------- */
@@ -640,7 +762,23 @@
     return { title: m.title, start: m.start, end: m.end, cat: m.cat, notes: m.notes || '', allDay: m.allDay, days: m.days, rem: m.rem, obs: m.obs };
   }
 
-  function applyChange(occ, scope, patch) {
+  /* ---------- «Отменить» ---------- */
+  var undoToast = null;
+  function snapshot() { return JSON.stringify({ events: S.events, tasks: S.tasks, tomb: S.tomb }); }
+  function offerUndo(snap, msg) {
+    if (undoToast) undoToast.remove();
+    var t = undoToast = toast(msg, { ms: 8000, action: ['Отменить', function () {
+      var old = JSON.parse(snap), cur = {};
+      S.events.forEach(function (e) { cur[e.id] = JSON.stringify(e); });
+      old.events.forEach(function (e) { if (cur[e.id] !== JSON.stringify(e)) mark(e); });
+      S.events = old.events; S.tasks = old.tasks; S.tomb = old.tomb;
+      save(); render(); undoToast = null;
+    }] });
+    return t;
+  }
+
+  function applyChange(occ, scope, patch, msg) {
+    var snap = snapshot();
     var m = occ._m, od = occ.date;
     function copyFields(t) { FIELDS.forEach(function (k) { if (k in patch) t[k] = patch[k]; }); }
     if (!m.rep || scope === 'all' || (scope === 'following' && od === m.date)) {
@@ -663,17 +801,20 @@
       S.events.push(mark(next));
     }
     save(); render();
+    offerUndo(snap, msg || ('title' in patch ? 'Изменения сохранены' : 'end' in patch && !('date' in patch) ? 'Длительность изменена' : 'Событие перемещено'));
   }
   function dropMaster(m) {
     if (m.gid) S.tomb.push(m.gid);
     S.events = S.events.filter(function (x) { return x !== m; });
   }
   function deleteOcc(occ, scope) {
+    var snap = snapshot();
     var m = occ._m, od = occ.date;
     if (!m.rep || scope === 'all' || (scope === 'following' && od === m.date)) dropMaster(m);
     else if (scope === 'one') { m.ex = (m.ex || []).concat(od); mark(m); }
     else { var r = normRep(m.rep); r.until = shiftDate(od, -1); m.rep = r; mark(m); }
     save(); render();
+    offerUndo(snap, '«' + m.title + '» удалено');
   }
 
   var scopeDlg = $('#scopeDialog');
@@ -881,6 +1022,14 @@
     $('#evPlace').value = d.place || '';
     var tsel = $('#evTravel'); tsel.value = String(TRAVELS.some(function (t) { return t[0] === d.travel; }) ? d.travel : 0);
     $('#evObs').value = d.obs || '';
+    // «Ещё» раскрыто, если там что-то заполнено; в подсказке — что именно
+    var filled = [];
+    if (d.rem !== undefined) filled.push('напоминание');
+    if (d.place || d.travel) filled.push(d.place ? d.place : 'дорога');
+    if ((d.notes || '').trim()) filled.push('заметка');
+    if ((d.obs || '').trim()) filled.push('Obsidian');
+    $('#evMore').open = filled.length > 0;
+    $('#evMoreHint').textContent = filled.length ? filled.join(' · ') : 'напоминание, место и дорога, заметка, Obsidian';
     var preset = repPreset(rep);
     var rs = $('#evRep');
     rs.replaceChildren.apply(rs, REMOVE_KEEP(REPS, preset === 'keep').map(function (r) { return h('option', { value: r[0] }, r[1]); }));
@@ -1009,6 +1158,15 @@
 
   /* ---------- быстрый ввод ---------- */
   var q = $('#quick'), pop = $('#quickPop');
+  var DOW_PL = ['воскресеньям', 'понедельникам', 'вторникам', 'средам', 'четвергам', 'пятницам', 'субботам'];
+  function repText(r) {
+    if (r.type === 'daily') return 'каждый день';
+    if (r.type === 'monthly') return 'каждый месяц';
+    if (r.type === 'yearly') return 'каждый год';
+    if (r.days && r.days.join() === '1,2,3,4,5') return 'по будням';
+    if (r.days && r.days.length) return 'по ' + r.days.map(function (d) { return DOW_PL[d]; }).join(', ');
+    return 'каждую неделю';
+  }
   function quickParse() { return P.parseQuick(q.value, new Date(), S.cats, S.settings.defaultCat); }
   function updateQuick() {
     if (!q.value.trim()) { pop.hidden = true; return; }
@@ -1018,7 +1176,8 @@
       h('div', { style: 'font-weight:600' }, r.title),
       h('div', { class: 'chips' },
         h('span', { class: 'chip' + (r.hasDate ? '' : ' dim') }, DOW_SHORT[d.getDay()] + ', ' + d.getDate() + ' ' + MON_GEN[d.getMonth()] + (r.hasDate ? '' : ' (по умолчанию)')),
-        h('span', { class: 'chip' + (r.hasTime ? '' : ' dim') }, hm(r.start) + '–' + hm(r.end) + (r.hasTime ? '' : ' (по умолчанию)')),
+        h('span', { class: 'chip' + (r.hasTime ? '' : ' dim') }, r.deadline ? 'срок ' + hm(r.start) : hm(r.start) + '–' + hm(r.end) + (r.hasTime ? '' : ' (по умолчанию)')),
+        r.rep ? h('span', { class: 'chip' }, '↻ ' + repText(r.rep)) : null,
         h('span', { class: 'chip', style: '--c:' + c.color }, c.name)),
       h('div', { class: 'mute small' }, 'Enter — добавить, Esc — отмена. Календарь можно указать через #: «#спорт».'));
     pop.hidden = false;
@@ -1029,9 +1188,10 @@
   q.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') { q.value = ''; q.blur(); }
     if (e.key === 'Enter' && q.value.trim()) {
-      var r = quickParse();
-      S.events.push(mark({ id: uid(), title: r.title, date: r.date, start: r.start, end: r.end, cat: r.cat, notes: '', rep: null, ex: [] }));
+      var r = quickParse(), snap = snapshot();
+      S.events.push(mark({ id: uid(), title: r.title, date: r.date, start: r.start, end: r.end, cat: r.cat, notes: '', rep: r.rep, ex: [] }));
       save(); q.value = ''; pop.hidden = true; setAnchor(parseYmd(r.date));
+      offerUndo(snap, '«' + r.title + '» добавлено');
     }
   });
   document.addEventListener('keydown', function (e) {
@@ -1111,13 +1271,33 @@
 
   function buildSettings() {
     colorInputs = {};
-    var presetRow = h('div', { class: 'presets' }, Object.keys(PRESETS).map(function (k) {
+    // тема: 5 акцентов + день/ночь, остальное — под «Другие темы»
+    var ACC = [['night', 'dayMint', 'Мята'], ['amber', 'dayAmber', 'Янтарь'], ['indigo', 'dayIndigo', 'Индиго'], ['lime', 'dayLime', 'Лайм'], ['rose', 'dayRose', 'Роза']];
+    function isDay() { return lum(S.settings.colors.bg) >= 0.25; }
+    var accRow = h('div', { class: 'acc-row' }), modeSeg = h('div', { class: 'seg mode-seg' });
+    function paintTheme() {
+      var k = presetKey();
+      accRow.replaceChildren.apply(accRow, ACC.map(function (a) {
+        var on = k === a[0] || k === a[1];
+        return h('button', { type: 'button', class: 'acc' + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false', style: '--a:' + PRESETS[a[0]].c.accent + ';--b:' + PRESETS[a[0]].c.a2,
+          onclick: function () { setColors(PRESETS[isDay() ? a[1] : a[0]].c); paintTheme(); } }, h('i'), a[2]);
+      }));
+      modeSeg.replaceChildren.apply(modeSeg, [[false, '☾ Ночь'], [true, '☀ День']].map(function (m) {
+        return h('button', { type: 'button', 'aria-pressed': isDay() === m[0] ? 'true' : 'false', onclick: function () {
+          if (isDay() === m[0]) return;
+          var k2 = presetKey(), to = THEME_PAIR[k2] || (m[0] ? 'dayMint' : 'night');
+          setColors(PRESETS[to].c); paintTheme();
+        } }, m[1]);
+      }));
+    }
+    paintTheme();
+    var presetRow = h('div', { class: 'presets' }, ['light', 'dark', 'warm', 'graphite', 'mint'].map(function (k) {
       var p = PRESETS[k];
-      return h('button', { type: 'button', class: 'preset', onclick: function () { setColors(p.c); } },
+      return h('button', { type: 'button', class: 'preset', onclick: function () { setColors(p.c); paintTheme(); } },
         h('span', { class: 'dots' }, [p.c.bg, p.c.panel, p.c.accent].map(function (x) { return h('i', { style: 'background:' + x }); })), p.name);
     }));
     presetRow.append(h('button', { type: 'button', class: 'preset', onclick: function () {
-      setColors(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? PRESETS.dark.c : PRESETS.light.c);
+      setColors(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? PRESETS.dark.c : PRESETS.light.c); paintTheme();
     } }, 'Как в системе'));
 
     var colors = h('div', { class: 'colors' }, COLOR_LABELS.map(function (p) {
@@ -1158,7 +1338,8 @@
     setBody.replaceChildren(
       h('div', { style: 'display:flex;align-items:center;margin-bottom:6px' }, h('h2', { style: 'margin:0;flex:1' }, 'Настройки'),
         h('button', { type: 'button', class: 'btn primary', onclick: function () { setDlg.close(); } }, 'Готово')),
-      h('div', { class: 'set-sec' }, h('h3', null, 'Цвета и тема'), presetRow, colors, demoBox),
+      h('div', { class: 'set-sec' }, h('h3', null, 'Тема'), h('div', { class: 'theme-pick' }, accRow, modeSeg), demoBox,
+        h('details', { class: 'more-themes' }, h('summary', null, 'Другие темы и свои цвета'), presetRow, colors)),
       h('div', { class: 'set-sec' }, h('h3', null, 'Вид'), view),
       h('div', { class: 'set-sec' }, h('h3', null, 'Календари и их цвета'), catBox,
         h('button', { type: 'button', class: 'btn', onclick: function () {
@@ -1175,6 +1356,28 @@
     setBody.insertBefore(obs, dataSec);
     extra.forEach(function (f) { try { setBody.insertBefore(f(), dataSec); } catch (e) { /* секция модуля недоступна */ } });
     renderCatEditor(); refreshDemo();
+    sectionNav();
+  }
+  /* настройки разделами: слева (на телефоне сверху) список, по нажатию — прокрутка к разделу */
+  function sectionNav() {
+    var head = setBody.firstElementChild, secs = Array.prototype.slice.call(setBody.querySelectorAll(':scope > .set-sec'));
+    var main = h('div', { class: 'set-main' }), nav = h('nav', { class: 'set-nav', 'aria-label': 'Разделы настроек' });
+    secs.forEach(function (sec, i) {
+      var t = sec.querySelector('h3'), name = t ? t.textContent.replace(/\s*\(.*\)$/, '').replace(' и их цвета', '') : 'Раздел ' + (i + 1);
+      sec.id = 'set-' + i;
+      nav.append(h('button', { type: 'button', 'data-i': i, onclick: function () { sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); markNav(i); } }, name));
+      main.append(sec);
+    });
+    function markNav(i) { Array.prototype.forEach.call(nav.children, function (b, j) { b.classList.toggle('on', j === i); }); }
+    markNav(0);
+    head.classList.add('set-head');
+    setBody.replaceChildren(head, h('div', { class: 'set-layout' }, nav, main));
+    setDlg.onscroll = function () {
+      var top = setDlg.getBoundingClientRect().top + 110, cur = 0;
+      secs.forEach(function (sec, i) { if (sec.getBoundingClientRect().top <= top) cur = i; });
+      if (setDlg.scrollTop + setDlg.clientHeight >= setDlg.scrollHeight - 4) cur = secs.length - 1;
+      markNav(cur);
+    };
   }
 
   $('#openSettings').addEventListener('click', function () { buildSettings(); setDlg.showModal(); });
@@ -1185,6 +1388,7 @@
     var box = $('#toasts');
     var t = h('div', { class: 'toast', role: 'status' },
       h('div', { class: 'grow' }, opts.title ? h('b', null, opts.title) : null, h('div', null, msg)),
+      opts.action ? h('button', { type: 'button', class: 'btn toast-act', onclick: function () { t.remove(); opts.action[1](); } }, opts.action[0]) : null,
       h('button', { type: 'button', class: 'x', 'aria-label': 'Закрыть', onclick: function () { t.remove(); } }, '✕'));
     box.append(t);
     if (!opts.sticky) setTimeout(function () { t.remove(); }, opts.ms || 9000);

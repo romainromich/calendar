@@ -32,7 +32,7 @@
       C.toast('Услышал: «' + text + '». Времени не было, поставьте его в форме.');
       return;
     }
-    var ev = C.mark({ id: C.uid(), title: r.title, date: r.date, start: r.start, end: r.end, cat: r.cat, notes: '', rep: null, ex: [] });
+    var ev = C.mark({ id: C.uid(), title: r.title, date: r.date, start: r.start, end: r.end, cat: r.cat, notes: '', rep: r.rep, ex: [] });
     S.events.push(ev); C.save(); C.setAnchor(d);
     var t = C.toast(r.title + ' · ' + when, { title: 'Добавил по голосу', ms: 15000 });
     var row = h('div', { style: 'display:flex;gap:8px;margin-top:8px' },

@@ -8,7 +8,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#08090C">
-<link rel="stylesheet" href="style.css?v=50">
+<link rel="stylesheet" href="style.css?v=51">
 </head>
 <body>
 <div id="splash" aria-hidden="true"><div class="sp-ic"><i class="sp-t1"></i><i class="sp-m"><b class="sp-dn">ПН</b><b class="sp-nm">16</b></i><i class="sp-t3"></i></div></div>
@@ -145,26 +145,29 @@ setTimeout(done,1750);s.addEventListener('click',done);})();
     </div>
     <div class="row2">
       <label class="field">Календарь<select id="evCat"></select></label>
-      <label class="field">Напоминание<select id="evRem"></select></label>
-    </div>
-    <div class="row2">
-      <label class="field">Место<input id="evPlace" type="text" autocomplete="off" placeholder="Корпус, адрес"></label>
-      <label class="field">Дорога<select id="evTravel"></select></label>
-    </div>
-    <div class="row2">
       <label class="field">Повтор<select id="evRep"></select></label>
-      <label class="field" id="evUntilWrap">Повторять до (необязательно)<input id="evUntil" type="date"></label>
     </div>
+    <label class="field" id="evUntilWrap">Повторять до (необязательно)<input id="evUntil" type="date"></label>
     <div id="evDays" class="daysrow" hidden></div>
-    <label class="field">Доп. информация / заметка<textarea id="evNotes" rows="2" placeholder="Что важно знать к этому событию"></textarea></label>
-    <label class="field">Заметка в Obsidian (путь внутри хранилища)
-      <span class="inline">
-        <input id="evObs" type="text" placeholder="МИЭТ/Сессия/Матан">
-        <button type="button" class="btn" id="evObsOpen">Открыть</button>
-        <button type="button" class="btn" id="evObsNew">Создать</button>
-      </span>
-      <button type="button" class="linkbtn" id="evObsSync" hidden title="Допишет в конец заметки дату, время и место из события">Дописать актуальные данные в заметку</button>
-    </label>
+    <details id="evMore" class="ev-more">
+      <summary><span>Ещё</span><small id="evMoreHint">напоминание, место и дорога, заметка, Obsidian</small></summary>
+      <div class="ev-more-body">
+        <label class="field">Напоминание<select id="evRem"></select></label>
+        <div class="row2">
+          <label class="field">Место<input id="evPlace" type="text" autocomplete="off" placeholder="Корпус, адрес"></label>
+          <label class="field">Дорога<select id="evTravel"></select></label>
+        </div>
+        <label class="field">Доп. информация / заметка<textarea id="evNotes" rows="2" placeholder="Что важно знать к этому событию"></textarea></label>
+        <label class="field">Заметка в Obsidian (путь внутри хранилища)
+          <span class="inline">
+            <input id="evObs" type="text" placeholder="МИЭТ/Сессия/Матан">
+            <button type="button" class="btn" id="evObsOpen">Открыть</button>
+            <button type="button" class="btn" id="evObsNew">Создать</button>
+          </span>
+          <button type="button" class="linkbtn" id="evObsSync" hidden title="Допишет в конец заметки дату, время и место из события">Дописать актуальные данные в заметку</button>
+        </label>
+      </div>
+    </details>
     <div class="dlg-actions">
       <button type="button" class="btn danger" id="evDelete">Удалить</button>
       <button type="button" class="btn" id="evPrep" style="display:none">Подготовка</button>
@@ -193,16 +196,17 @@ setTimeout(done,1750);s.addEventListener('click',done);})();
 </dialog>
 
 
-<script src="parse.js?v=50"></script>
-<script src="app.js?v=50"></script>
-<script src="notify.js?v=50"></script>
-<script src="sync.js?v=50"></script>
-<script src="push.js?v=50"></script>
-<script src="backup.js?v=50"></script>
-<script src="prep.js?v=50"></script>
-<script src="voice.js?v=50"></script>
-<script src="review.js?v=50"></script>
-<script src="offline.js?v=50"></script>
-<script src="focus.js?v=50"></script>
+<script src="parse.js?v=51"></script>
+<script src="app.js?v=51"></script>
+<script src="notify.js?v=51"></script>
+<script src="sync.js?v=51"></script>
+<script src="push.js?v=51"></script>
+<script src="backup.js?v=51"></script>
+<script src="cloudsync.js?v=51"></script>
+<script src="prep.js?v=51"></script>
+<script src="voice.js?v=51"></script>
+<script src="review.js?v=51"></script>
+<script src="offline.js?v=51"></script>
+<script src="focus.js?v=51"></script>
 </body>
 </html>
