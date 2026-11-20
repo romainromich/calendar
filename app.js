@@ -470,11 +470,11 @@
         var top = (Math.max(e.start, hs * 60) - hs * 60) / 60 * hh;
         var height = (Math.min(e.end, he * 60) - Math.max(e.start, hs * 60)) / 60 * hh - 2;
         var w = 100 / L._lanes;
-        var node = h('div', { class: 'ev' + (isKey(e) ? ' key' : ''), tabindex: '0', role: 'button', 'aria-label': e.title + ', ' + hm(e.start) + '–' + hm(e.end) + (e._m.rep ? ', повторяется' : ''),
+        var node = h('div', { class: 'ev' + (isKey(e) ? ' key' : '') + (height < 34 ? ' short' : ''), tabindex: '0', role: 'button', 'aria-label': e.title + ', ' + hm(e.start) + '–' + hm(e.end) + (e._m.rep ? ', повторяется' : ''),
           style: '--c:' + catById(e.cat).color + ';top:' + (top + 1) + 'px;height:' + Math.max(height, 18) + 'px;left:calc(' + (L._lane * w) + '% + 2px);width:calc(' + w + '% - 4px)',
           onpointerdown: function (evt) { startMove(evt, node, e); },
           onkeydown: function (evt) { if (evt.key === 'Enter' || evt.key === ' ') { evt.preventDefault(); openEvent(e); } } },
-          h('b', null, shy(evLabel(e))), h('span', null, hm(e.start) + '–' + hm(e.end) + (e._m.rep ? ' ↻' : '') + (e.obs ? ' ↗' : '')),
+          h('b', null, isMobile() ? shy(e.title) : evLabel(e)), h('span', null, hm(e.start) + '–' + hm(e.end) + (e._m.rep ? ' ↻' : '') + (e.obs ? ' ↗' : '')),
           h('div', { class: 'rz', 'aria-hidden': 'true', onpointerdown: function (evt) { startResize(evt, node, e); } }));
         col.append(node);
       });
