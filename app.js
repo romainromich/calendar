@@ -578,36 +578,9 @@
       }
     });
     flushHabits(1e9);
-    var evening = isToday && nm >= 15 * 60 && timed.every(function (e) { return e.end <= nm; });
-    if (evening) tl.append(eveningCard());
-    else if (!evs.length && !habs.length) tl.append(h('div', { class: 'empty big' }, 'На этот день ничего нет.', h('br'), 'Нажми «+», чтобы добавить событие.'));
+    if (!evs.length && !habs.length) tl.append(h('div', { class: 'empty big' }, 'На этот день ничего нет.', h('br'), 'Нажми «+», чтобы добавить событие.'));
     var adBox = ad.length ? h('div', { class: 'tl-ad' }, ad.map(adChip)) : null;
     return h('div', { class: 'ag-wrap' }, chip, strip, adBox, tl);
-  }
-
-  /* вечер: на сегодня всё закончилось — что осталось отметить и что завтра */
-  function eveningCard() {
-    var td = today(), tk = ymd(td), tm = addDays(td, 1), tmk = ymd(tm);
-    var left = S.habits.filter(function (hb) { return (S.log[hb.id] || []).indexOf(tk) < 0; });
-    var tmr = eventsOn(tmk).filter(function (e) { return !e.allDay; });
-    var first = tmr[0], dueT = S.tasks.filter(function (t) { return !t.done && t.due === tmk; });
-    var card = h('div', { class: 'eve' }, h('div', { class: 'eve-h' }, 'На сегодня всё'));
-    if (left.length) {
-      card.append(h('div', { class: 'eve-sec' }, h('div', { class: 'mute small' }, 'Не отмечено сегодня'),
-        h('div', { class: 'eve-habs' }, left.map(function (hb) {
-          return h('button', { type: 'button', class: 'eve-hab', onclick: function () { toggleHabit(hb, tk); } }, h('span', { class: 'ck' }), hb.title);
-        }))));
-    }
-    var sec = h('div', { class: 'eve-sec' }, h('div', { class: 'mute small' }, 'Завтра, ' + DOW_LONG[tm.getDay()].toLowerCase()));
-    if (first) {
-      var lv = first.travel ? Math.max(0, first.start - first.travel - leaveBuf()) : null;
-      sec.append(h('button', { type: 'button', class: 'eve-first', style: '--c:' + catById(first.cat).color, onclick: function () { setAnchor(tm); } },
-        h('b', null, hm(first.start)), h('span', null, first.title),
-        h('em', { class: 'mute small' }, (lv != null ? 'выйти в ' + hm(lv) + ' · ' : '') + 'всего событий: ' + tmr.length)));
-    } else sec.append(h('div', null, 'Событий нет — свободный день.'));
-    if (dueT.length) sec.append(h('div', { class: 'mute small', style: 'margin-top:6px' }, 'Срок завтра: ' + dueT.map(function (t) { return t.title; }).join(', ')));
-    card.append(sec);
-    return h('div', { class: 'tl-row eve-row' }, h('span', { class: 'dot', 'aria-hidden': 'true' }), card);
   }
 
   function renderMonth() {
