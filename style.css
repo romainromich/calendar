@@ -799,3 +799,4 @@ dialog#setDialog{width:min(920px,95vw);padding-top:0}
 /* синхронизация устройств */
 .cs-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0}
 .cs-key{font:600 15px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em;padding:8px 12px;border:1px dashed var(--line);border-radius:10px;user-select:all}
+.cs-token{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}

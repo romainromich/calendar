@@ -4,11 +4,32 @@
    приложения забирает текст через /due и показывает уведомление.
    Ещё хранит зашифрованную копию данных календаря для синхронизации устройств
    (/data): сервер видит только хэш ключа и шифротекст, расшифровать его не может. */
-const ALLOWED = ['https://romainromich.github.io', 'http://localhost:8080'];
+const ALLOWED = ['https://romainromich.github.io'];
 const SUBJECT = 'https://romainromich.github.io/calendar/';
 const WINDOW = 15 * 60 * 1000;      // опоздавшие больше чем на 15 минут не отправляются
 const MAX_ITEMS = 150;
 const MAX_DATA = 4 * 1024 * 1024;   // зашифрованные данные одного календаря
+
+/* Защита. Код доступа задаётся секретом OWNER в настройках воркера (Settings → Variables and Secrets).
+   Пока секрета нет, сервер работает по-старому, чтобы обновление ничего не сломало. */
+const TOKEN_HDR = 'X-Cal-Token';
+const LIMIT = { n: 300, ms: 10 * 60 * 1000 };   // записей с одного адреса за 10 минут
+const hits = new Map();
+function limited(req) {
+  const ip = req.headers.get('CF-Connecting-IP') || 'x', now = Date.now();
+  let h = hits.get(ip);
+  if (!h || now - h.t > LIMIT.ms) { h = { t: now, n: 0 }; hits.set(ip, h); }
+  h.n++;
+  if (hits.size > 5000) hits.clear();
+  return h.n > LIMIT.n;
+}
+function same(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+const authed = (req, env) => !env.OWNER || same(req.headers.get(TOKEN_HDR) || '', env.OWNER);
 
 const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const text = (s, n) => String(s == null ? '' : s).slice(0, n);
@@ -89,7 +110,7 @@ async function tick(env) {
 
 function corsFor(req) {
   const o = req.headers.get('Origin');
-  const h = { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '86400', Vary: 'Origin' };
+  const h = { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, ' + TOKEN_HDR, 'Access-Control-Max-Age': '86400', Vary: 'Origin', 'X-Content-Type-Options': 'nosniff' };
   if (o && ALLOWED.includes(o)) h['Access-Control-Allow-Origin'] = o;
   return h;
 }
@@ -100,8 +121,12 @@ async function handle(req, env) {
   const origin = req.headers.get('Origin');
   const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
-  if (origin && !ALLOWED.includes(origin)) return json({ error: 'origin' }, 403);
   if (url.pathname === '/') return new Response('calendar-push ok', { headers: cors });
+  if (!origin || !ALLOWED.includes(origin)) return json({ error: 'origin' }, 403);      // только со страницы календаря
+  if (req.method === 'POST') {
+    if (limited(req)) return json({ error: 'rate' }, 429);
+    if (!authed(req, env)) return json({ error: 'token' }, 401);
+  }
   if (url.pathname === '/vapid') return json({ key: (await vapid(env)).pub });
   if (url.pathname === '/due') {
     const id = url.searchParams.get('id') || '';

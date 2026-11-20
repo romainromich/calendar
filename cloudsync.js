@@ -55,7 +55,7 @@
     });
   }
   function put(id, rev, data) {
-    return fetch(base() + '/data?id=' + id, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ rev: rev, data: data }) })
+    return fetch(base() + '/data?id=' + id, { method: 'POST', headers: C.srvHeaders(), body: JSON.stringify({ rev: rev, data: data }) })
       .then(function (r) { return r.json().then(function (j) { j._status = r.status; return j; }); });
   }
 
@@ -134,7 +134,7 @@
           if (remote && same(merged, remote)) { write(LS_BASE, { rev: srv.rev, data: merged }); return 'ok'; }
           return seal(key, merged).then(function (ct) { return put(id, srv.rev, ct); }).then(function (res) {
             if (res._status === 409 && tries < 4) return step();
-            if (res._status !== 200) throw new Error(res.error === 'size' ? 'Данных слишком много для сервера' : 'Сервер ответил ' + res._status);
+            if (res._status !== 200) throw new Error(res._status === 401 ? 'неверный код доступа к серверу' : res._status === 429 ? 'слишком много запросов, попробую позже' : res.error === 'size' ? 'Данных слишком много для сервера' : 'Сервер ответил ' + res._status);
             write(LS_BASE, { rev: res.rev, data: merged });
             return 'ok';
           });
@@ -216,10 +216,27 @@
         h('button', { type: 'button', class: 'btn danger', onclick: disable }, 'Отключить'))
     ];
   }
+  /* код доступа к серверу: без него сервер не примет записи (если код на нём задан) */
+  function tokenBlock() {
+    var cur = C.srvToken(), inp = h('input', { type: 'password', value: cur, placeholder: 'код из Cloudflare', autocomplete: 'off', spellcheck: 'false' });
+    var st = h('div', { class: 'mute small' }, cur ? 'Код сохранён на этом устройстве.' : 'Кода нет. Если на сервере задан секрет OWNER, без кода не будут работать push и синхронизация.');
+    return h('div', { class: 'cs-token' },
+      h('label', { class: 'field' }, 'Код доступа к серверу (для push и синхронизации)', inp),
+      h('div', { class: 'cs-row' },
+        h('button', { type: 'button', class: 'btn', onclick: function () { C.srvToken(inp.value.trim()); st.textContent = inp.value.trim() ? 'Код сохранён. Проверяю…' : 'Код удалён с этого устройства.'; if (on()) run().then(function () { st.textContent = lastErr || 'Код подошёл.'; }); } }, 'Сохранить код'),
+        h('button', { type: 'button', class: 'btn', onclick: function () { inp.type = inp.type === 'password' ? 'text' : 'password'; } }, 'Показать'),
+        h('button', { type: 'button', class: 'btn', onclick: function () {
+          var r = crypto.getRandomValues(new Uint8Array(24)), code = b64(r).replace(/[+/=]/g, '').slice(0, 32);
+          inp.value = code; inp.type = 'text';
+          st.textContent = 'Новый код. Вставьте его в Cloudflare как секрет OWNER, затем нажмите «Сохранить код».';
+          if (navigator.clipboard) navigator.clipboard.writeText(code).catch(function () { /* скопируют вручную */ });
+        } }, 'Создать новый')),
+      st);
+  }
   C.extra.push(function () {
     box = h('div');
     rebuild();
-    return h('div', { class: 'set-sec' }, h('h3', null, 'Синхронизация устройств'), box);
+    return h('div', { class: 'set-sec' }, h('h3', null, 'Синхронизация устройств'), box, tokenBlock());
   });
 
   /* ---------- когда синхронизировать ---------- */

@@ -1472,7 +1472,16 @@
   });
 
   /* ---------- API для модулей (напоминания, Google) ---------- */
+  /* код доступа к своему серверу (push и синхронизация): хранится только на этом устройстве */
+  var SRV_KEY = 'calendar.srvtoken';
+  function srvToken(v) {
+    if (v !== undefined) { try { if (v) localStorage.setItem(SRV_KEY, v); else localStorage.removeItem(SRV_KEY); } catch (e) { /* нет места */ } }
+    try { return localStorage.getItem(SRV_KEY) || ''; } catch (e) { return ''; }
+  }
+  function srvHeaders(extra) { var hd = Object.assign({ 'Content-Type': 'text/plain' }, extra || {}), t = srvToken(); if (t) hd['X-Cal-Token'] = t; return hd; }
+
   window.Cal = {
+    srvToken: srvToken, srvHeaders: srvHeaders,
     get S() { return S; }, set S(v) { S = v; },
     save: save, render: render, uid: uid, ymd: ymd, parseYmd: parseYmd, shiftDate: shiftDate, dayDiff: dayDiff, addDays: addDays,
     occursOn: occursOn, eventsOn: eventsOn, catById: catById, hm: hm, toast: toast, mark: mark, normRep: normRep, remMinutes: remMinutes,

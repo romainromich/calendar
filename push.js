@@ -20,8 +20,8 @@
     return a;
   }
   function post(path, body) {
-    return fetch(base() + path, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(body) }).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) { var e = new Error(j.error || ('HTTP ' + r.status)); e.status = r.status; throw e; } return j; });
+    return fetch(base() + path, { method: 'POST', headers: C.srvHeaders(), body: JSON.stringify(body) }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) { var e = new Error(r.status === 401 ? 'неверный код доступа к серверу (Настройки → Синхронизация устройств)' : r.status === 429 ? 'слишком много запросов, попробуйте позже' : j.error || ('HTTP ' + r.status)); e.status = r.status; throw e; } return j; });
     });
   }
   function setStatus(t) { if (statusEl) statusEl.textContent = t; }

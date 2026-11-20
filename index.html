@@ -2,25 +2,19 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<script>try{var _c=JSON.parse(localStorage.getItem('calendar.v1')||'{}').settings.colors.bg;document.documentElement.style.background=_c||'#0E1116';}catch(e){document.documentElement.style.background='#0E1116';}</script>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https://*.googleusercontent.com; font-src 'self' data:; connect-src 'self' https://*.workers.dev https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<script src="boot.js?v=52"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Календарь</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#08090C">
-<link rel="stylesheet" href="style.css?v=51">
+<link rel="stylesheet" href="style.css?v=52">
 </head>
 <body>
 <div id="splash" aria-hidden="true"><div class="sp-ic"><i class="sp-t1"></i><i class="sp-m"><b class="sp-dn">ПН</b><b class="sp-nm">16</b></i><i class="sp-t3"></i></div></div>
-<script>
-(function(){var s=document.getElementById('splash');
-try{if(sessionStorage.getItem('splash')){s.remove();return;}sessionStorage.setItem('splash','1');}catch(e){}
-var d=new Date(),days=['ВС','ПН','ВТ','СР','ЧТ','ПТ','СБ'];
-s.querySelector('.sp-dn').textContent=days[d.getDay()];s.querySelector('.sp-nm').textContent=d.getDate();
-try{var c=JSON.parse(localStorage.getItem('calendar.v1')||'{}').settings.colors;if(c&&c.accent){s.style.setProperty('--sa',c.accent);s.style.setProperty('--sb',c.a2||'#A78BFA');if(c.bg)s.style.setProperty('--sbg',c.bg);}}catch(e){}
-function done(){if(s.parentNode){s.classList.add('out');setTimeout(function(){if(s.parentNode)s.remove();},450);}}
-setTimeout(done,1750);s.addEventListener('click',done);})();
-</script>
+<script src="splash.js?v=52"></script>
 <div id="app" data-tab="cal">
 <div id="scrim"></div>
 
@@ -133,7 +127,7 @@ setTimeout(done,1750);s.addEventListener('click',done);})();
   <form id="evForm" method="dialog">
     <div class="dlg-head">
       <h2 id="evHeading" tabindex="-1" autofocus>Событие</h2>
-      <button type="button" id="evBack" aria-label="Закрыть без сохранения" onclick="this.closest('dialog').close()"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <button type="button" id="evBack" aria-label="Закрыть без сохранения"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div id="evRo" class="note" hidden>Это событие повторяется по правилу, которое календарь пока не умеет редактировать. Оно загружено из Google только для просмотра; изменить его можно в самом Google Calendar.</div>
     <label class="field">Название<input id="evTitle" type="text" required autocomplete="off"></label>
@@ -196,17 +190,17 @@ setTimeout(done,1750);s.addEventListener('click',done);})();
 </dialog>
 
 
-<script src="parse.js?v=51"></script>
-<script src="app.js?v=51"></script>
-<script src="notify.js?v=51"></script>
-<script src="sync.js?v=51"></script>
-<script src="push.js?v=51"></script>
-<script src="backup.js?v=51"></script>
-<script src="cloudsync.js?v=51"></script>
-<script src="prep.js?v=51"></script>
-<script src="voice.js?v=51"></script>
-<script src="review.js?v=51"></script>
-<script src="offline.js?v=51"></script>
-<script src="focus.js?v=51"></script>
+<script src="parse.js?v=52"></script>
+<script src="app.js?v=52"></script>
+<script src="notify.js?v=52"></script>
+<script src="sync.js?v=52"></script>
+<script src="push.js?v=52"></script>
+<script src="backup.js?v=52"></script>
+<script src="cloudsync.js?v=52"></script>
+<script src="prep.js?v=52"></script>
+<script src="voice.js?v=52"></script>
+<script src="review.js?v=52"></script>
+<script src="offline.js?v=52"></script>
+<script src="focus.js?v=52"></script>
 </body>
 </html>
