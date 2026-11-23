@@ -53,6 +53,23 @@
     if (/^(c1|c2|z1|z2)$/.test(s.trim())) return s.trim();
     return 'all';
   }
+  // «25.11» или «25 ноября» → ближайшая к сегодняшнему дню дата с таким числом и месяцем
+  var MON = ['янв', 'фев', 'мар', 'апр', 'ма', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+  function dateOf(v) {
+    var s = String(v || '').toLowerCase(), m = /(\d{1,2})[.\/](\d{1,2})/.exec(s), dd, mm;
+    if (m) { dd = +m[1]; mm = +m[2] - 1; }
+    else {
+      m = /(\d{1,2})\s+([а-я]+)/.exec(s);
+      if (!m) return null;
+      dd = +m[1]; mm = -1;
+      for (var i = 0; i < MON.length; i++) if (m[2].indexOf(MON[i]) === 0 && !(i === 4 && /^мар/.test(m[2]))) { mm = i; break; }
+      if (mm < 0) return null;
+    }
+    if (mm < 0 || mm > 11 || dd < 1 || dd > 31) return null;
+    var now = new Date(), best = null;
+    [-1, 0, 1].forEach(function (k) { var d = new Date(now.getFullYear() + k, mm, dd); if (!best || Math.abs(d - now) < Math.abs(best - now)) best = d; });
+    return C.ymd(best);
+  }
   function clean(l) {
     var start = toMin(l.start), end = toMin(l.end);
     if (start == null && l.pair && BELLS[l.pair]) { start = toMin(BELLS[l.pair][0]); end = toMin(BELLS[l.pair][1]); }
@@ -63,7 +80,8 @@
     var wk = weeksOf(l.weeks, /[чз]\s*-\s*i/i.test(title + ' ' + room) ? (title + ' ' + room) : '');
     room = room.replace(/^[чз]\s*-\s*i{1,2}\s*\|?\s*/i, '');
     title = title.replace(/^[чз]\s*-\s*i{1,2}\s*\|?\s*/i, '');
-    return { on: !!(title && start != null && dayOf(l.day)), day: dayOf(l.day), start: start, end: end, title: title, kind: kindOf(l.kind),
+    var dt = dateOf(l.date), day = dayOf(l.day) || (dt ? (C.parseYmd(dt).getDay() || 7) : null);
+    return { on: !!(title && start != null && day), day: day, dates: dt ? [dt] : null, start: start, end: end, title: title, kind: kindOf(l.kind),
       room: room, teacher: String(l.teacher || '').trim(), weeks: wk, note: note };
   }
 
@@ -79,15 +97,16 @@
     try {
       var a = t.indexOf('{'), b = t.lastIndexOf('}'), o = JSON.parse(t.slice(a, b + 1)), out = [];
       if (Array.isArray(o.lessons)) out = o.lessons;
-      else if (Array.isArray(o.days)) o.days.forEach(function (d) { (d.lessons || []).forEach(function (l) { out.push(Object.assign({}, l, { day: l.day || d.day })); }); });
+      else if (Array.isArray(o.days)) o.days.forEach(function (d) { (d.lessons || []).forEach(function (l) { out.push(Object.assign({}, l, { day: l.day || d.day, date: l.date || d.date })); }); });
       if (out.length) return out;
     } catch (e) { /* ниже — поштучно */ }
-    var lessons = [], day = null, re = /"day"\s*:\s*(\d)\s*,\s*"lessons"|\{[^{}\[\]]*"start"[^{}\[\]]*\}/g, m;
+    var lessons = [], day = null, date = null, re = /"day"\s*:\s*(\d)\s*,\s*(?:"date"\s*:\s*"([^"]*)"\s*,\s*)?"lessons"|\{[^{}\[\]]*"start"[^{}\[\]]*\}/g, m;
     while ((m = re.exec(t))) {
-      if (m[1]) { day = +m[1]; continue; }
+      if (m[1]) { day = +m[1]; date = m[2] || null; continue; }
       var obj = fixObj(m[0]);
       if (!obj) continue;
       if (obj.day == null && day != null) obj.day = day;
+      if (obj.date == null && date) obj.date = date;
       lessons.push(obj);
     }
     return lessons;
@@ -105,13 +124,13 @@
       img.src = url;
     });
   }
-  function recognize(file, onStep) {
-    return toDataUrl(file).then(function (img) {
+  function recognize(img, onStep) {
+    return Promise.resolve().then(function () {
       var i = 0, lastErr = null;
       function next() {
         if (i >= MODELS.length) throw lastErr || new Error('Не удалось распознать');
         var model = MODELS[i++];
-        onStep(i === 1 ? 'Распознаю расписание…' : 'Первая модель не справилась, пробую запасную…');
+        if (i > 1) onStep('запасная модель');
         return fetch(base() + '/ai/schedule', { method: 'POST', headers: C.srvHeaders(), body: JSON.stringify({ model: model, image: img, prompt: 'v2' }) })
           .then(function (r) { return r.json().then(function (j) { j._status = r.status; return j; }); })
           .then(function (j) {
@@ -125,6 +144,96 @@
           }, function (e) { if (e.fatal) throw e; lastErr = /fetch/i.test(e.message) ? new Error('Сервер недоступен') : e; return next(); });
       }
       return next();
+    });
+  }
+
+  /* ---------- несколько скриншотов ---------- */
+  function loadImg(file) {
+    return new Promise(function (res, rej) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () { res(img); };
+      img.onerror = function () { rej(new Error('Не удалось открыть «' + file.name + '»')); };
+      img.src = url;
+    });
+  }
+  function canvasOf(w, hgt) { var c = document.createElement('canvas'); c.width = w; c.height = hgt; return c; }
+  function gray(img, w) {
+    var k = w / img.naturalWidth, hh = Math.round(img.naturalHeight * k), c = canvasOf(w, hh), x = c.getContext('2d', { willReadFrequently: true });
+    x.drawImage(img, 0, 0, w, hh);
+    var d = x.getImageData(0, 0, w, hh).data, g = new Float32Array(w * hh);
+    for (var i = 0; i < g.length; i++) g[i] = d[i * 4] * 0.3 + d[i * 4 + 1] * 0.59 + d[i * 4 + 2] * 0.11;
+    return { g: g, w: w, h: hh, k: k };
+  }
+  function rowDiff(a, ya, b, yb, w) { var s = 0; for (var x = 0; x < w; x += 2) s += Math.abs(a.g[ya * w + x] - b.g[yb * w + x]); return s / (w / 2); }
+  function rowStd(a, y, w) { var m = 0, q = 0, n = 0; for (var x = 0; x < w; x += 2) { var v = a.g[y * w + x]; m += v; q += v * v; n++; } m /= n; return Math.sqrt(Math.max(0, q / n - m * m)); }
+  // скриншоты прокрутки одной таблицы → одна картинка; иначе null
+  function stitch(imgs) {
+    var W = Math.min(480, imgs[0].naturalWidth), gs = imgs.map(function (im) { return gray(im, W); }), H = gs[0].h, top = 0, bot = H - 1;
+    var same = function (y) { var s = 0; for (var i = 1; i < gs.length; i++) s += rowDiff(gs[i - 1], y, gs[i], y, W); return s / (gs.length - 1) < 4; };
+    while (top < H * 0.25 && same(top)) top++;            // строка состояния и шапка приложения одинаковы на всех кадрах
+    while (bot > H * 0.75 && same(bot)) bot--;            // нижняя панель навигации
+    var ch = bot - top + 1, offs = [];
+    for (var i = 1; i < gs.length; i++) {
+      var A = gs[i - 1], B = gs[i], best = null;
+      for (var sft = Math.round(ch * 0.1); sft <= ch - Math.round(ch * 0.15); sft++) {
+        var ov = ch - sft, d = 0, n = 0;
+        for (var y = 0; y < ov; y += 2) { d += rowDiff(A, top + sft + y, B, top + y, W); n++; }
+        d /= n;
+        if (!best || d < best.d) best = { d: d, s: sft, ov: ov };
+      }
+      // перекрытие должно быть похожим и непустым: иначе это разные экраны, а не прокрутка
+      var info = 0; for (var yy = 0; yy < best.ov; yy += 2) info += rowStd(B, top + yy, W) > 12 ? 1 : 0;
+      if (!best || best.d > 9 || info < best.ov / 2 * 0.15) return null;
+      offs.push(best.s);
+    }
+    var k = imgs[0].naturalWidth / W, t = Math.round(top * k), cH = Math.round(ch * k);
+    var total = cH + offs.reduce(function (a, b) { return a + Math.round(b * k); }, 0), c = canvasOf(imgs[0].naturalWidth, total), x = c.getContext('2d'), y0 = 0;
+    imgs.forEach(function (im, i) {
+      x.drawImage(im, 0, t, im.naturalWidth, cH, 0, y0, im.naturalWidth, cH);
+      if (i < offs.length) y0 += Math.round(offs[i] * k);
+    });
+    return c;
+  }
+  function canvasToData(c, max) {
+    var k = Math.min(1, max / Math.max(c.width, c.height));
+    if (k < 1) { var c2 = canvasOf(Math.round(c.width * k), Math.round(c.height * k)); c2.getContext('2d').drawImage(c, 0, 0, c2.width, c2.height); c = c2; }
+    return c.toDataURL('image/jpeg', 0.88);
+  }
+  function imgToData(im) { var c = canvasOf(im.naturalWidth, im.naturalHeight); c.getContext('2d').drawImage(im, 0, 0); return canvasToData(c, 1600); }
+  // файлы → список картинок для нейросети: подряд идущие кадры прокрутки склеиваются
+  function prepare(files) {
+    return Promise.all(files.map(loadImg)).then(function (imgs) {
+      if (imgs.length === 1) return { parts: [imgToData(imgs[0])], stitched: false };
+      var sameSize = imgs.every(function (im) { return im.naturalWidth === imgs[0].naturalWidth && im.naturalHeight === imgs[0].naturalHeight; });
+      var c = sameSize ? stitch(imgs) : null;
+      if (c) return { parts: [canvasToData(c, 2000)], stitched: true };
+      return { parts: imgs.map(imgToData), stitched: false };
+    });
+  }
+  // одинаковые пары с разных скриншотов — одна строка; даты копятся, чтобы потом понять чётность
+  function norm(s) { return String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9]+/g, ''); }
+  function merge(rows) {
+    var out = [], by = {};
+    rows.forEach(function (r) {
+      var k = [r.day, r.start, norm(r.title), norm(r.room), r.weeks].join('|'), x = by[k];
+      if (!x) { by[k] = Object.assign({}, r, { dates: r.dates ? r.dates.slice() : null }); out.push(by[k]); return; }
+      if (r.dates) x.dates = (x.dates || []).concat(r.dates.filter(function (d) { return (x.dates || []).indexOf(d) < 0; }));
+      if (!x.teacher && r.teacher) x.teacher = r.teacher;
+      if (!x.kind && r.kind) x.kind = r.kind;
+    });
+    return out;
+  }
+  // по датам скриншотов: пара есть в обе недели — каждую, в одну — числитель или знаменатель
+  function weeksByDates(rows, sem) {
+    if (!sem) return;
+    var all = {};
+    rows.forEach(function (r) { (r.dates || []).forEach(function (d) { all[weekNo(C.parseYmd(d), sem) % 2] = 1; }); });
+    if (!(all[0] && all[1])) return;                    // скриншоты только за одну неделю — чётность не понять
+    rows.forEach(function (r) {
+      if (!r.dates || r.weeksTouched) return;
+      var p = {};
+      r.dates.forEach(function (d) { p[weekNo(C.parseYmd(d), sem) % 2] = 1; });
+      r.weeks = p[0] && p[1] ? 'all' : p[1] ? 'odd' : 'even';
     });
   }
 
@@ -308,7 +417,7 @@
   function close() { if (dlg) { dlg.close(); dlg.remove(); dlg = null; } }
   function open() {
     close();
-    state = { rows: [], src: '' };
+    state = { rows: [], src: '', note: '' };
     dlg = h('dialog', { class: 'wide-dlg imp-dlg', 'aria-label': 'Импорт расписания' });
     dlg.addEventListener('cancel', function () { setTimeout(close, 0); });
     document.body.append(dlg);
@@ -321,13 +430,18 @@
   function stepSource(err) {
     var file = h('input', { type: 'file', accept: 'image/*,.xlsx,.csv,.ics,text/csv,text/calendar', hidden: true });
     var status = h('div', { class: 'imp-status', role: 'status' }, err ? h('span', { class: 'imp-err' }, err) : null);
-    file.addEventListener('change', function () { if (file.files[0]) load(file.files[0], status); });
-    var pick = function (accept) { return function () { file.accept = accept; file.click(); }; };
+    file.addEventListener('change', function () {
+      var fs = Array.prototype.slice.call(file.files);
+      if (!fs.length) return;
+      var imgs = fs.filter(function (f) { return /^image\//.test(f.type); });
+      if (imgs.length > 1 || (imgs.length === 1 && fs.length === 1)) loadImages(imgs, status); else load(fs[0], status);
+    });
+    var pick = function (accept, multi) { return function () { file.accept = accept; file.multiple = !!multi; file.click(); }; };
     dlg.replaceChildren(
       head('Импорт расписания', 'Выберите, откуда взять пары. Перед добавлением всё можно проверить и поправить.'),
       h('div', { class: 'imp-src' },
-        h('button', { type: 'button', class: 'imp-card', onclick: pick('image/*') }, h('b', null, 'Скриншот или фото'),
-          h('span', { class: 'mute small' }, 'Расписание с сайта вуза, из приложения или фото листа. Распознаёт нейросеть, до полутора минут.')),
+        h('button', { type: 'button', class: 'imp-card', onclick: pick('image/*', true) }, h('b', null, 'Скриншоты или фото'),
+          h('span', { class: 'mute small' }, 'Один или несколько: куски длинной таблицы склеятся сами, отдельные дни объединятся. Распознаёт нейросеть, до полутора минут на картинку.')),
         h('button', { type: 'button', class: 'imp-card', onclick: pick('.xlsx,.csv,text/csv') }, h('b', null, 'Таблица Excel или CSV'),
           h('span', { class: 'mute small' }, 'Строка — одно занятие: день, время, предмет, аудитория… Разбирается сразу, без интернета.')),
         h('button', { type: 'button', class: 'imp-card', onclick: pick('.ics,text/calendar') }, h('b', null, 'Файл календаря .ics'),
@@ -348,11 +462,7 @@
       stepPreview();
     };
     var fail = function (e) { clearInterval(timer); stepSource(e && e.message ? e.message : String(e)); };
-    if (/^image\//.test(f.type)) {
-      say('Распознаю расписание…', true);
-      timer = setInterval(function () { var s = Math.round((Date.now() - t0) / 1000); status.firstChild && (status.firstChild.textContent = status.firstChild.textContent.replace(/ · \d+ с$/, '') + ' · ' + s + ' с'); }, 1000);
-      recognize(f, function (m) { say(m, true); }).then(function (l) { done(l, 'image'); }, fail);
-    } else if (/\.xlsx$/.test(name)) {
+    if (/\.xlsx$/.test(name)) {
       say('Читаю таблицу…', true);
       f.arrayBuffer().then(parseXlsx).then(function (sheets) {
         for (var i = 0; i < sheets.length; i++) { var l = tableToLessons(sheets[i].rows); if (l && l.length) return done(l, 'table'); }
@@ -365,13 +475,45 @@
     } else fail(new Error('Этот тип файла не поддерживается. Подойдёт картинка, .xlsx, .csv или .ics.'));
   }
 
+  function loadImages(files, status) {
+    var t0 = Date.now(), msg = 'Готовлю картинки…', timer;
+    var paint = function () { status.replaceChildren(h('span', { class: 'imp-busy' }, msg + ' · ' + Math.round((Date.now() - t0) / 1000) + ' с')); };
+    var say = function (m) { msg = m; paint(); };
+    timer = setInterval(paint, 1000); paint();
+    var fail = function (e) { clearInterval(timer); stepSource(e && e.message ? e.message : String(e)); };
+    prepare(files).then(function (prep) {
+      var parts = prep.parts, n = parts.length, done = 0, results = new Array(n), errors = [], next = 0, extra = '';
+      if (prep.stitched) say('Склеил ' + files.length + ' скриншотов в одну таблицу. Распознаю…');
+      else say(n > 1 ? 'Распознаю 0 из ' + n + '…' : 'Распознаю расписание…');
+      return new Promise(function (resolve) {
+        function worker() {
+          if (next >= n) return Promise.resolve();
+          var i = next++;
+          return recognize(parts[i], function (m) { extra = ' (' + m + ')'; })
+            .then(function (l) { results[i] = l; }, function (e) { if (e.fatal) throw e; errors.push((n > 1 ? 'картинка ' + (i + 1) + ': ' : '') + e.message); results[i] = []; })
+            .then(function () { done++; if (n > 1) say('Распознаю ' + done + ' из ' + n + '…' + extra); return worker(); });
+        }
+        Promise.all([worker(), worker(), worker()]).then(resolve, fail);
+      }).then(function () {
+        clearInterval(timer);
+        var rows = merge([].concat.apply([], results).map(clean));
+        state.src = 'image';
+        state.rows = rows;
+        state.note = (prep.stitched ? 'Склеено из ' + files.length + ' скриншотов. ' : n > 1 ? 'Объединено из ' + n + ' картинок. ' : '') + (errors.length ? 'Не распознано: ' + errors.join('; ') + '. ' : '');
+        if (!rows.length) { stepSource('Занятий не нашлось. ' + (errors[0] || 'Попробуйте скриншот почётче или крупнее.')); return; }
+        stepPreview();
+      });
+    }).catch(fail);
+  }
+
   function stepPreview() {
     var ics = state.src === 'ics', st = S().settings;
     var sem = h('input', { type: 'date', value: st.semStart || guessSem() });
     var from = h('input', { type: 'date' }), until = h('input', { type: 'date', value: guessEnd(sem.value) });
     var today = C.ymd(C.startOfWeek(new Date()));
     from.value = sem.value > today ? sem.value : today;
-    sem.addEventListener('change', function () { until.value = guessEnd(sem.value); if (from.value < sem.value) from.value = sem.value; paintWeek(); });
+    sem.addEventListener('change', function () { until.value = guessEnd(sem.value); if (from.value < sem.value) from.value = sem.value; paintWeek(); weeksByDates(state.rows, sem.value); paintRows(); });
+    weeksByDates(state.rows, sem.value);
     var cats = S().cats, cat = h('select', null, cats.map(function (c) { return h('option', { value: c.id }, c.name); }));
     cat.value = cats.some(function (c) { return c.id === 'study'; }) ? 'study' : (st.defaultCat || cats[0].id);
     var prev = S().events.filter(function (e) { return e.imp; }), replace = h('input', { type: 'checkbox' });
@@ -405,7 +547,7 @@
           h('td', null, sel(KINDS.map(function (k) { return [k, k || '—']; }).concat(KINDS.indexOf(r.kind) < 0 ? [[r.kind, r.kind]] : []), r.kind || '', function (v) { r.kind = v; })),
           h('td', null, inp(r.room, function (v) { r.room = v; }, 'text', 'imp-room')),
           ics ? null : h('td', null, inp(r.teacher, function (v) { r.teacher = v; }, 'text', 'imp-teacher')),
-          ics ? null : h('td', null, sel(WEEKS, r.weeks, function (v) { r.weeks = v; })));
+          ics ? null : h('td', null, sel(WEEKS, r.weeks, function (v) { r.weeks = v; r.weeksTouched = true; })));
         return tr;
       }));
     }
@@ -424,7 +566,7 @@
       h('label', null, 'Повторять до', until),
       h('label', null, 'Календарь', cat));
     dlg.replaceChildren(
-      head('Проверьте занятия', (state.src === 'image' ? 'Распознано нейросетью — проверьте недели и аудитории. ' : '') + 'Снимите галочку, чтобы пропустить занятие.'),
+      head('Проверьте занятия', (state.note || '') + (state.src === 'image' ? 'Распознано нейросетью — проверьте недели и аудитории. ' : '') + 'Снимите галочку, чтобы пропустить занятие.'),
       settings, ics ? null : weekNote,
       prev.length ? h('label', { class: 'imp-replace' }, replace, ' Заменить прошлый импорт (' + prev.length + ' ' + plural(prev.length).replace('занят', 'событ').replace('событие', 'событие') + ')') : null,
       h('div', { class: 'imp-table' }, h('table', null,
@@ -472,5 +614,5 @@
         } }, 'Удалить импортированное') : null));
   });
 
-  window.CalImport = { open: open, _parseAnswer: parseAnswer, _clean: clean, _table: tableToLessons, _csv: parseCsv, _xlsx: parseXlsx, _ics: parseIcs, _makeEvent: makeEvent, _weekNo: weekNo };
+  window.CalImport = { open: open, _stitch: stitch, _prepare: prepare, _merge: merge, _weeksByDates: weeksByDates, _dateOf: dateOf, _parseAnswer: parseAnswer, _clean: clean, _table: tableToLessons, _csv: parseCsv, _xlsx: parseXlsx, _ics: parseIcs, _makeEvent: makeEvent, _weekNo: weekNo };
 })();
