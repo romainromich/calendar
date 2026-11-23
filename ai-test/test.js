@@ -4,9 +4,8 @@
   'use strict';
   var MODELS = [
     ['@cf/meta/llama-4-scout-17b-16e-instruct', 'Llama 4 Scout 17B'],
-    ['@cf/google/gemma-4-26b-a4b-it', 'Gemma 4 26B'],
     ['@cf/qwen/qwen3.8-27b', 'Qwen 3.8 27B'],
-    ['@cf/moondream/moondream3.1-9B-A2B', 'Moondream 3.1'],
+    ['@cf/google/gemma-4-26b-a4b-it', 'Gemma 4 26B', true],
     ['@cf/meta/llama-3.2-11b-vision-instruct', 'Llama 3.2 11B Vision', true]
   ];
   var SAMPLES = [
@@ -49,6 +48,7 @@
   }
   $('#file').addEventListener('change', function () {
     Array.prototype.forEach.call(this.files, function (f) {
+      if (!/^image\//.test(f.type)) { $('#status').textContent = '«' + f.name + '» — не картинка. Таблицы и файлы календаря будут разбираться без нейросети, отдельно.'; return; }
       var url = URL.createObjectURL(f);
       images.push({ id: 'u' + Date.now() + Math.random().toString(36).slice(2, 6), name: f.name.slice(0, 24), src: url, on: true, sample: false });
     });
@@ -93,16 +93,26 @@
   /* ---------- разбор ответа и оценка ---------- */
   function parseAnswer(text) {
     var t = String(text || '').replace(/<think>[\s\S]*?<\/think>/g, '').replace(/```(json)?/g, '');
-    try { return parseJson(t); }
-    catch (e) {
-      // обрезанный ответ: оставляем занятия до последнего целого объекта
-      var i = t.indexOf('"lessons"'), last = t.lastIndexOf('}');
-      if (i >= 0 && last > i) {
-        var cut = t.slice(t.lastIndexOf('{', i), last + 1);
-        for (var k = 0; k < 3; k++) { try { return JSON.parse(cut + ']}'); } catch (e2) { cut = cut.slice(0, cut.lastIndexOf('}', cut.length - 2) + 1); } }
-      }
-      throw e;
+    try { var o = parseJson(t); if (o.lessons && o.lessons.length) return o; } catch (e) { /* ниже — поштучно */ }
+    // запасной путь: ответ обрезан или с ошибкой в JSON — вынимаем каждое занятие отдельно.
+    // Занятие — плоский объект без вложенных скобок; день берём из него или из ближайшего "day" перед "lessons"
+    var lessons = [], day = null, re = /"day"\s*:\s*(\d)\s*,\s*"lessons"|\{[^{}\[\]]*"start"[^{}\[\]]*\}/g, m;
+    while ((m = re.exec(t))) {
+      if (m[1]) { day = +m[1]; continue; }
+      var obj = fixObj(m[0]);
+      if (!obj) continue;
+      if (obj.day == null && day != null) obj.day = day;
+      lessons.push(obj);
     }
+    if (!lessons.length) throw new Error('В ответе нет занятий');
+    return { lessons: lessons, repaired: true };
+  }
+  // мелкие ошибки моделей: висячие запятые, ключи без кавычек, «умные» кавычки
+  function fixObj(s) {
+    var t2 = s.replace(/[“”«»]/g, '"').replace(/,\s*}/g, '}').replace(/([{,]\s*)([a-zA-Z_]+)\s*:/g, '$1"$2":').replace(/"\s+"(?=[a-zA-Z_]+"\s*:)/g, '","');
+    var tries = [s, t2];
+    for (var i = 0; i < tries.length; i++) { try { return JSON.parse(tries[i]); } catch (e) { /* следующая попытка */ } }
+    return null;
   }
   function parseJson(t) {
     var a = t.indexOf('{'), b = t.lastIndexOf('}');
