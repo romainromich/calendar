@@ -10,6 +10,49 @@ const WINDOW = 15 * 60 * 1000;      // опоздавшие больше чем 
 const MAX_ITEMS = 150;
 const MAX_DATA = 4 * 1024 * 1024;   // зашифрованные данные одного календаря
 
+/* Распознавание расписания по картинке (Workers AI, привязка AI в настройках воркера).
+   chat — модели с картинкой в сообщении (OpenAI-формат), image — Llama 3.2 Vision (картинка отдельным полем). */
+const AI_MODELS = {
+  '@cf/meta/llama-3.2-11b-vision-instruct': 'image',
+  '@cf/meta/llama-4-scout-17b-16e-instruct': 'chat',
+  '@cf/google/gemma-4-26b-a4b-it': 'chat',
+  '@cf/moonshotai/kimi-k2.6': 'chat'
+};
+const MAX_IMAGE = 3 * 1024 * 1024;
+const SCHEDULE_PROMPT = 'Ты извлекаешь расписание учебных занятий с изображения. Верни ТОЛЬКО JSON без пояснений и без markdown, строго в формате ' +
+  '{"lessons":[{"day":1,"start":"09:00","end":"10:20","title":"","kind":"","room":"","teacher":"","weeks":"all"}]}. ' +
+  'day: 1 — понедельник … 7 — воскресенье. start и end: время в формате ЧЧ:ММ. title: название дисциплины полностью, как написано. ' +
+  'kind: вид занятия словом (лекция, практика, лабораторная, семинар, консультация, экзамен) — сокращения Лек, Пр, Лаб, Сем раскрывай; если не указан — пустая строка. ' +
+  'room: аудитория как написано, без слова «ауд.». teacher: преподаватель как написано. ' +
+  'weeks: "odd" — только нечётные недели (нечёт, I, числитель), "even" — только чётные (чёт, II, знаменатель), иначе "all". ' +
+  'Если в одной ячейке две разные пары для чётной и нечётной недели — это два объекта. Каждое занятие — отдельный объект. Не выдумывай: чего нет на изображении — пустая строка.';
+async function aiSchedule(env, b, json) {
+  if (!env.AI) return json({ error: 'no-ai', message: 'К воркеру не подключён Workers AI (привязка AI)' }, 501);
+  const mode = AI_MODELS[b.model];
+  if (!mode) return json({ error: 'model' }, 400);
+  if (typeof b.image !== 'string' || !/^data:image\/(png|jpeg|webp);base64,/.test(b.image) || b.image.length > MAX_IMAGE) return json({ error: 'image' }, 400);
+  const task = 'Извлеки все занятия с этого изображения расписания.' + (b.hint ? ' Подсказка: ' + String(b.hint).slice(0, 300) : '');
+  const input = mode === 'image'
+    ? { messages: [{ role: 'system', content: SCHEDULE_PROMPT }, { role: 'user', content: task }], image: b.image, max_tokens: 3000, temperature: 0 }
+    : { messages: [{ role: 'system', content: SCHEDULE_PROMPT }, { role: 'user', content: [{ type: 'text', text: task }, { type: 'image_url', image_url: { url: b.image } }] }], max_tokens: 3000, temperature: 0 };
+  const t0 = Date.now();
+  let out;
+  try { out = await env.AI.run(b.model, input); }
+  catch (e) {
+    // Llama 3.2 Vision просит один раз принять лицензию Meta
+    if (/agree/i.test(String(e && e.message)) && mode === 'image') {
+      try { await env.AI.run(b.model, { prompt: 'agree' }); out = await env.AI.run(b.model, input); }
+      catch (e2) { return json({ error: 'ai', message: String(e2 && e2.message || e2).slice(0, 400) }, 502); }
+    } else return json({ error: 'ai', message: String(e && e.message || e).slice(0, 400) }, 502);
+  }
+  const text = typeof out === 'string' ? out
+    : out && typeof out.response === 'string' ? out.response
+    : out && out.response && typeof out.response === 'object' ? JSON.stringify(out.response)
+    : out && out.choices && out.choices[0] && out.choices[0].message ? (out.choices[0].message.content || '')
+    : JSON.stringify(out);
+  return json({ model: b.model, ms: Date.now() - t0, text, usage: out && out.usage || null });
+}
+
 /* Защита. Код доступа задаётся секретом OWNER в настройках воркера (Settings → Variables and Secrets).
    Пока секрета нет, сервер работает по-старому, чтобы обновление ничего не сломало. */
 const TOKEN_HDR = 'X-Cal-Token';
@@ -139,6 +182,12 @@ async function handle(req, env) {
     const items = s.due[id] || [];
     if (items.length) { delete s.due[id]; await save(env, s); }
     return json({ items });
+  }
+  if (url.pathname === '/ai/schedule') {
+    if (req.method !== 'POST') return json({ error: 'method' }, 405);
+    let b;
+    try { b = JSON.parse(await req.text()); } catch (e) { return json({ error: 'json' }, 400); }
+    return aiSchedule(env, b, json);
   }
   if (url.pathname === '/data') {
     // синхронизация: id — хэш секретного ключа (64 hex), data — шифротекст
