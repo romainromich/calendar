@@ -10,7 +10,7 @@
     ['@cf/meta/llama-3.2-11b-vision-instruct', 'Llama 3.2 11B Vision', true]
   ];
   var SAMPLES = [
-    ['a', 'Сетка с чёт/нечёт'], ['b', 'Список в приложении'], ['c', 'Таблица Excel'], ['d', 'Тёмная неделя']
+    ['e', 'МИЭТ, настоящее'], ['a', 'Сетка с чёт/нечёт'], ['b', 'Список в приложении'], ['c', 'Таблица Excel'], ['d', 'Тёмная неделя']
   ];
   var DEF_URL = 'https://calendar-push.efremovr449.workers.dev';
   var DAYN = ['', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -82,6 +82,14 @@
     return el('label', { class: 'chip' }, cb, m[1]);
   }));
 
+  var PROMPTS = [['v1', 'Промпт 1 (старый)', false], ['v2', 'Промпт 2 (по дням)', true]], usePrompt = { v1: false, v2: true };
+  $('#prompts').append.apply($('#prompts'), PROMPTS.map(function (p) {
+    var cb = el('input', { type: 'checkbox' });
+    cb.checked = p[2];
+    cb.addEventListener('change', function () { usePrompt[p[0]] = cb.checked; });
+    return el('label', { class: 'chip' }, cb, p[1]);
+  }));
+
   /* ---------- разбор ответа и оценка ---------- */
   function parseAnswer(text) {
     var t = String(text || '').replace(/<think>[\s\S]*?<\/think>/g, '').replace(/```(json)?/g, '');
@@ -104,7 +112,13 @@
       throw new Error('В ответе нет JSON');
     }
     var o = JSON.parse(t.slice(a, b + 1));
-    return Array.isArray(o) ? { lessons: o } : o;
+    if (Array.isArray(o)) return { lessons: o };
+    if (!o.lessons && Array.isArray(o.days)) {
+      // v2: занятия сгруппированы по дням
+      o.lessons = [];
+      o.days.forEach(function (d) { (d.lessons || []).forEach(function (l) { o.lessons.push(Object.assign({ day: d.day }, l, { day: l.day || d.day })); }); });
+    }
+    return o;
   }
   function hhmm(v) { var m = /(\d{1,2})[:.](\d{2})/.exec(String(v || '')); return m ? ('0' + m[1]).slice(-2) + ':' + m[2] : ''; }
   function norm(s) { return String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/ауд\.?|аудитория/g, '').replace(/[^a-zа-я0-9]+/g, ' ').trim(); }
@@ -152,10 +166,10 @@
   function cls(p) { return p >= 85 ? 'g' : p >= 60 ? 'm' : 'b'; }
 
   /* ---------- запуск ---------- */
-  function call(model, dataUrl) {
+  function call(model, dataUrl, prompt) {
     var h = { 'Content-Type': 'text/plain' }, t = token();
     if (t) h['X-Cal-Token'] = t;
-    return fetch(server() + '/ai/schedule', { method: 'POST', headers: h, body: JSON.stringify({ model: model, image: dataUrl, hint: $('#hint').value.trim() }) })
+    return fetch(server() + '/ai/schedule', { method: 'POST', headers: h, body: JSON.stringify({ model: model, image: dataUrl, prompt: prompt, hint: $('#hint').value.trim() }) })
       .then(function (r) { return r.json().then(function (j) { j._status = r.status; return j; }); });
   }
   function errText(j) {
@@ -167,7 +181,8 @@
   }
 
   $('#go').addEventListener('click', function () {
-    var imgs = images.filter(function (x) { return x.on; }), models = MODELS.filter(function (m) { return chosen[m[0]]; });
+    var imgs = images.filter(function (x) { return x.on; }), models = [], ps = PROMPTS.filter(function (p) { return usePrompt[p[0]]; });
+    MODELS.forEach(function (m) { if (chosen[m[0]]) ps.forEach(function (p) { models.push([m[0], m[1] + (ps.length > 1 ? ' · ' + p[0] : ''), p[0]]); }); });
     if (!imgs.length || !models.length) { $('#status').textContent = 'Выберите хотя бы одну картинку и одну модель.'; return; }
     var btn = this; btn.disabled = true; $('#copy').disabled = true;
     results = [];
@@ -182,7 +197,7 @@
       var r = { im: j.im, model: j.m, state: 'run' };
       results.push(r); paintAll();
       (cache[j.im.id] ? Promise.resolve(cache[j.im.id]) : toDataUrl(j.im.src).then(function (d) { cache[j.im.id] = d; return d; }))
-        .then(function (d) { return call(j.m[0], d); })
+        .then(function (d) { return call(j.m[0], d, j.m[2]); })
         .then(function (ans) {
           if (ans._status !== 200) { r.state = 'err'; r.err = errText(ans); return; }
           r.ms = ans.ms; r.raw = ans.text; r.usage = ans.usage;
@@ -204,7 +219,7 @@
     if (!results.length) { box.replaceChildren(el('span', { class: 'mute small', text: 'Пока пусто.' })); return; }
     var by = {};
     results.forEach(function (r) {
-      var k = r.model[0], s = by[k] = by[k] || { name: r.model[1], pct: [], ms: [], errs: 0, n: 0 };
+      var k = r.model[1], s = by[k] = by[k] || { name: r.model[1], pct: [], ms: [], errs: 0, n: 0 };
       if (r.state === 'run') return;
       s.n++;
       if (r.state !== 'ok') s.errs++;

@@ -27,15 +27,26 @@ const SCHEDULE_PROMPT = 'Ты извлекаешь расписание учеб
   'room: аудитория как написано, без слова «ауд.». teacher: преподаватель как написано. ' +
   'weeks: "odd" — только нечётные недели (нечёт, I, числитель), "even" — только чётные (чёт, II, знаменатель), иначе "all". ' +
   'Если в одной ячейке две разные пары для чётной и нечётной недели — это два объекта. Каждое занятие — отдельный объект. Не выдумывай: чего нет на изображении — пустая строка.';
+// v2: сначала оси таблицы (дни и время), потом занятия по дням — против путаницы столбцов
+const SCHEDULE_PROMPT_V2 = 'Ты извлекаешь расписание учебных занятий с изображения и возвращаешь ТОЛЬКО JSON, без пояснений и без markdown.\n' +
+  'Действуй по шагам.\n' +
+  'Шаг 1. Найди оси. Определи, где на изображении дни недели (заголовки столбцов, строк или разделов) и где время пар. Запиши их в "axes".\n' +
+  'Шаг 2. Пройди дни по порядку. Для каждого дня перечисли занятия только из ЕГО столбца (строки, раздела). День занятия определяй по заголовку столбца, под которым стоит текст, а не по соседним ячейкам. Пустой столбец — пустой список.\n' +
+  'Шаг 3. Время занятия бери из строки (или подписи), на уровне которой оно стоит. Если указан номер пары и время — используй время.\n' +
+  'Недели: если ячейка разделена на верх и низ с подписями «числитель/знаменатель», «чёт/нечёт», «I/II» или похожими — верхняя или помеченная «числитель», «нечёт», «I» половина это "odd", «знаменатель», «чёт», «II» это "even". ' +
+  'Текст, занимающий всю ячейку целиком, или одинаковый в обеих половинах — "all". Две разные пары в одной ячейке — два объекта.\n' +
+  'Поля: title — название дисциплины полностью; kind — вид словом (лекция, практика, лабораторная, семинар, консультация, экзамен), сокращения Лек, Пр, Лаб, Сем раскрывай; room — аудитория как написано (например «3223 ОМС», «1202 м», «А-305»), без слова «ауд.»; teacher — преподаватель как написано. Чего нет на изображении — пустая строка, ничего не выдумывай.\n' +
+  'Формат ответа строго: {"axes":{"days":["Понедельник","…"],"times":["09:00-10:20","…"]},"days":[{"day":1,"lessons":[{"start":"09:00","end":"10:20","title":"","kind":"","room":"","teacher":"","weeks":"all"}]}]}. day: 1 — понедельник … 7 — воскресенье.';
 async function aiSchedule(env, b, json) {
   if (!env.AI) return json({ error: 'no-ai', message: 'К воркеру не подключён Workers AI (привязка AI)' }, 501);
   const mode = AI_MODELS[b.model];
   if (!mode) return json({ error: 'model' }, 400);
   if (typeof b.image !== 'string' || !/^data:image\/(png|jpeg|webp);base64,/.test(b.image) || b.image.length > MAX_IMAGE) return json({ error: 'image' }, 400);
+  const prompt = b.prompt === 'v2' ? SCHEDULE_PROMPT_V2 : SCHEDULE_PROMPT;
   const task = 'Извлеки все занятия с этого изображения расписания.' + (b.hint ? ' Подсказка: ' + String(b.hint).slice(0, 300) : '');
   const input = mode === 'image'
-    ? { messages: [{ role: 'system', content: SCHEDULE_PROMPT }, { role: 'user', content: task }], image: b.image, max_tokens: 6000, temperature: 0 }
-    : { messages: [{ role: 'system', content: SCHEDULE_PROMPT }, { role: 'user', content: [{ type: 'text', text: task }, { type: 'image_url', image_url: { url: b.image } }] }], max_tokens: 6000, temperature: 0 };
+    ? { messages: [{ role: 'system', content: prompt }, { role: 'user', content: task }], image: b.image, max_tokens: 6000, temperature: 0 }
+    : { messages: [{ role: 'system', content: prompt }, { role: 'user', content: [{ type: 'text', text: task }, { type: 'image_url', image_url: { url: b.image } }] }], max_tokens: 6000, temperature: 0 };
   const t0 = Date.now();
   let out;
   try { out = await env.AI.run(b.model, input); }
@@ -52,7 +63,9 @@ async function aiSchedule(env, b, json) {
     : out && out.response && typeof out.response === 'object' ? JSON.stringify(out.response)
     : out && out.choices && out.choices[0] && out.choices[0].message ? (out.choices[0].message.content || '')
     : JSON.stringify(out);
-  return json({ model: b.model, ms: Date.now() - t0, text, usage: out && out.usage || null });
+  // пустой ответ (бывает у Gemma): отдаём, что пришло, чтобы понять причину
+  const shown = text && text.trim() ? text : 'ПУСТОЙ ОТВЕТ, пришло: ' + JSON.stringify(out).slice(0, 1500);
+  return json({ model: b.model, ms: Date.now() - t0, text: shown, usage: out && out.usage || null });
 }
 
 /* Защита. Код доступа задаётся секретом OWNER в настройках воркера (Settings → Variables and Secrets).
