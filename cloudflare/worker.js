@@ -13,10 +13,11 @@ const MAX_DATA = 4 * 1024 * 1024;   // зашифрованные данные �
 /* Распознавание расписания по картинке (Workers AI, привязка AI в настройках воркера).
    chat — модели с картинкой в сообщении (OpenAI-формат), image — Llama 3.2 Vision (картинка отдельным полем). */
 const AI_MODELS = {
-  '@cf/meta/llama-3.2-11b-vision-instruct': 'image',
   '@cf/meta/llama-4-scout-17b-16e-instruct': 'chat',
   '@cf/google/gemma-4-26b-a4b-it': 'chat',
-  '@cf/moonshotai/kimi-k2.6': 'chat'
+  '@cf/qwen/qwen3.8-27b': 'chat',
+  '@cf/moondream/moondream3.1-9B-A2B': 'chat',
+  '@cf/meta/llama-3.2-11b-vision-instruct': 'image'
 };
 const MAX_IMAGE = 3 * 1024 * 1024;
 const SCHEDULE_PROMPT = 'Ты извлекаешь расписание учебных занятий с изображения. Верни ТОЛЬКО JSON без пояснений и без markdown, строго в формате ' +
@@ -33,15 +34,16 @@ async function aiSchedule(env, b, json) {
   if (typeof b.image !== 'string' || !/^data:image\/(png|jpeg|webp);base64,/.test(b.image) || b.image.length > MAX_IMAGE) return json({ error: 'image' }, 400);
   const task = 'Извлеки все занятия с этого изображения расписания.' + (b.hint ? ' Подсказка: ' + String(b.hint).slice(0, 300) : '');
   const input = mode === 'image'
-    ? { messages: [{ role: 'system', content: SCHEDULE_PROMPT }, { role: 'user', content: task }], image: b.image, max_tokens: 3000, temperature: 0 }
-    : { messages: [{ role: 'system', content: SCHEDULE_PROMPT }, { role: 'user', content: [{ type: 'text', text: task }, { type: 'image_url', image_url: { url: b.image } }] }], max_tokens: 3000, temperature: 0 };
+    ? { messages: [{ role: 'system', content: SCHEDULE_PROMPT }, { role: 'user', content: task }], image: b.image, max_tokens: 6000, temperature: 0 }
+    : { messages: [{ role: 'system', content: SCHEDULE_PROMPT }, { role: 'user', content: [{ type: 'text', text: task }, { type: 'image_url', image_url: { url: b.image } }] }], max_tokens: 6000, temperature: 0 };
   const t0 = Date.now();
   let out;
   try { out = await env.AI.run(b.model, input); }
   catch (e) {
     // Llama 3.2 Vision просит один раз принять лицензию Meta
     if (/agree/i.test(String(e && e.message)) && mode === 'image') {
-      try { await env.AI.run(b.model, { prompt: 'agree' }); out = await env.AI.run(b.model, input); }
+      try { await env.AI.run(b.model, { prompt: 'agree' }); } catch (e3) { /* «спасибо, что согласились» приходит ошибкой */ }
+      try { out = await env.AI.run(b.model, input); }
       catch (e2) { return json({ error: 'ai', message: String(e2 && e2.message || e2).slice(0, 400) }, 502); }
     } else return json({ error: 'ai', message: String(e && e.message || e).slice(0, 400) }, 502);
   }

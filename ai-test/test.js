@@ -3,10 +3,11 @@
 (function () {
   'use strict';
   var MODELS = [
-    ['@cf/meta/llama-3.2-11b-vision-instruct', 'Llama 3.2 11B Vision'],
     ['@cf/meta/llama-4-scout-17b-16e-instruct', 'Llama 4 Scout 17B'],
     ['@cf/google/gemma-4-26b-a4b-it', 'Gemma 4 26B'],
-    ['@cf/moonshotai/kimi-k2.6', 'Kimi K2.6']
+    ['@cf/qwen/qwen3.8-27b', 'Qwen 3.8 27B'],
+    ['@cf/moondream/moondream3.1-9B-A2B', 'Moondream 3.1'],
+    ['@cf/meta/llama-3.2-11b-vision-instruct', 'Llama 3.2 11B Vision', true]
   ];
   var SAMPLES = [
     ['a', 'Сетка с чёт/нечёт'], ['b', 'Список в приложении'], ['c', 'Таблица Excel'], ['d', 'Тёмная неделя']
@@ -73,17 +74,29 @@
 
   /* ---------- модели ---------- */
   var chosen = {};
-  MODELS.forEach(function (m) { chosen[m[0]] = true; });
+  MODELS.forEach(function (m) { chosen[m[0]] = !m[2]; });
   $('#models').append.apply($('#models'), MODELS.map(function (m) {
     var cb = el('input', { type: 'checkbox' });
-    cb.checked = true;
+    cb.checked = !m[2];
     cb.addEventListener('change', function () { chosen[m[0]] = cb.checked; });
     return el('label', { class: 'chip' }, cb, m[1]);
   }));
 
   /* ---------- разбор ответа и оценка ---------- */
   function parseAnswer(text) {
-    var t = String(text || '').replace(/```(json)?/g, '');
+    var t = String(text || '').replace(/<think>[\s\S]*?<\/think>/g, '').replace(/```(json)?/g, '');
+    try { return parseJson(t); }
+    catch (e) {
+      // обрезанный ответ: оставляем занятия до последнего целого объекта
+      var i = t.indexOf('"lessons"'), last = t.lastIndexOf('}');
+      if (i >= 0 && last > i) {
+        var cut = t.slice(t.lastIndexOf('{', i), last + 1);
+        for (var k = 0; k < 3; k++) { try { return JSON.parse(cut + ']}'); } catch (e2) { cut = cut.slice(0, cut.lastIndexOf('}', cut.length - 2) + 1); } }
+      }
+      throw e;
+    }
+  }
+  function parseJson(t) {
     var a = t.indexOf('{'), b = t.lastIndexOf('}');
     if (a < 0 || b <= a) {
       var s1 = t.indexOf('['), s2 = t.lastIndexOf(']');
@@ -178,7 +191,7 @@
             r.pred = (o.lessons || []).filter(function (x) { return x && typeof x === 'object'; });
             if (j.im.sample && truth[j.im.id]) r.sc = score(r.pred, truth[j.im.id]);
             r.state = 'ok';
-          } catch (e) { r.state = 'bad'; r.err = 'Ответ не разобрать: ' + e.message; }
+          } catch (e) { r.state = 'bad'; r.err = 'Ответ не разобрать: ' + e.message + ' · начало ответа: ' + String(ans.text || '').slice(0, 300).replace(/\s+/g, ' '); }
         })
         .catch(function (e) { r.state = 'err'; r.err = /fetch/i.test(e.message) ? 'Сервер недоступен' : e.message; })
         .then(function () { done++; paintAll(); next(); });
