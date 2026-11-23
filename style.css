@@ -808,3 +808,37 @@ dialog#setDialog{width:min(920px,95vw);padding-top:0}
 .tl-i i{flex:none;width:13px;height:13px;background:currentColor;opacity:.7;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
 .ic-pin{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Cpath d='M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z'/%3E%3Ccircle cx='12' cy='9' r='2.5'/%3E%3C/svg%3E")}
 .ic-user{--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21c0-4 4-6 8-6s8 2 8 6'/%3E%3C/svg%3E")}
+/* импорт расписания */
+.imp-dlg{width:min(980px,96vw)}
+.imp-head h2{margin-bottom:4px}
+.imp-head p{margin:0 0 14px}
+.imp-src{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.imp-card{display:flex;flex-direction:column;gap:6px;text-align:left;padding:14px;border:1px solid var(--line);border-radius:14px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.imp-card:hover{border-color:var(--accent)}
+.imp-card b{font-size:1.02em}
+.imp-status{min-height:24px;margin:12px 0 4px}
+.imp-err{color:#E03131}
+.imp-busy::before{content:"";display:inline-block;width:12px;height:12px;margin-right:8px;border:2px solid var(--accent);border-right-color:transparent;border-radius:50%;vertical-align:-1px;animation:impSpin .8s linear infinite}
+@keyframes impSpin{to{transform:rotate(360deg)}}
+.imp-opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 12px;margin-bottom:6px}
+.imp-opts label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mute)}
+.imp-replace{display:flex;align-items:center;gap:6px;margin:8px 0;font-size:14px}
+.imp-table{overflow:auto;max-height:52vh;border:1px solid var(--line);border-radius:10px;margin-top:10px}
+.imp-table table{border-collapse:collapse;width:100%;font-size:13px}
+.imp-table th{position:sticky;top:0;background:var(--panel);text-align:left;font-weight:500;color:var(--mute);padding:6px;border-bottom:1px solid var(--line);z-index:1}
+.imp-table td{padding:4px;border-bottom:1px solid var(--line);vertical-align:top}
+.imp-table tr.off td{opacity:.4}
+.imp-table table{min-width:860px}
+.imp-table input,.imp-table select{width:100%;min-width:0;height:30px;padding:2px 6px;font-size:13px;border-radius:6px}
+.imp-table select{padding-right:2px}
+.imp-table td:nth-child(1){width:28px}
+.imp-table td:nth-child(2){width:62px}
+.imp-table .imp-title{min-width:220px}
+.imp-table .imp-room{width:92px}
+.imp-table .imp-teacher{min-width:120px}
+.imp-time{display:flex;align-items:center;gap:3px;width:118px}
+.imp-time .imp-t{width:52px;text-align:center;font-variant-numeric:tabular-nums}
+.imp-time span{color:var(--mute)}
+.imp-dlg .imp-table input,.imp-dlg .imp-table select{padding:2px 6px!important;height:30px!important;min-height:0!important;border-radius:6px!important;font-size:13px!important}
+dialog.imp-dlg{width:min(1080px,96vw)}
+.imp-table td:nth-child(5){width:118px}

@@ -399,8 +399,8 @@
   }
   /* тип занятия, аудитория, преподаватель — для «Дня» и уведомлений */
   function lessonInfo(e) {
-    var where = (e.place || '').trim(), lesson = isLesson(e), kind = '';
-    if (lesson) LESSON.some(function (x) { if (x[0].test(e.title + ' ' + (e.notes || ''))) { kind = x[1]; return true; } return false; });
+    var where = (e.place || '').trim(), lesson = isLesson(e) || !!e.kind, kind = e.kind || '';
+    if (lesson && !kind) LESSON.some(function (x) { if (x[0].test(e.title + ' ' + (e.notes || ''))) { kind = x[1]; return true; } return false; });
     if (where && /^[\dА-Яа-яA-Za-z]{0,2}-?\d{2,4}[а-яa-z]?$/i.test(where)) where = 'ауд. ' + where;     // «3204», «4-401» → «ауд. 3204»
     return { lesson: lesson, kind: kind, where: where, teacher: (e.teacher || '').trim() };
   }
@@ -803,10 +803,10 @@
   }
 
   /* ---------- изменение событий и повторов ---------- */
-  var FIELDS = ['title', 'start', 'end', 'cat', 'notes', 'allDay', 'days', 'rem', 'obs', 'place', 'travel', 'teacher'];
+  var FIELDS = ['title', 'start', 'end', 'cat', 'notes', 'allDay', 'days', 'rem', 'obs', 'place', 'travel', 'teacher', 'kind', 'imp'];
   function baseFields(m) {
     return { title: m.title, start: m.start, end: m.end, cat: m.cat, notes: m.notes || '', allDay: m.allDay, days: m.days, rem: m.rem, obs: m.obs,
-      place: m.place, travel: m.travel, teacher: m.teacher };
+      place: m.place, travel: m.travel, teacher: m.teacher, kind: m.kind, imp: m.imp };
   }
 
   /* ---------- «Отменить» ---------- */
@@ -1536,7 +1536,7 @@
   function srvHeaders(extra) { var hd = Object.assign({ 'Content-Type': 'text/plain' }, extra || {}), t = srvToken(); if (t) hd['X-Cal-Token'] = t; return hd; }
 
   window.Cal = {
-    srvToken: srvToken, srvHeaders: srvHeaders,
+    srvToken: srvToken, srvHeaders: srvHeaders, snapshot: snapshot, offerUndo: offerUndo, startOfWeek: startOfWeek,
     get S() { return S; }, set S(v) { S = v; },
     save: save, render: render, uid: uid, ymd: ymd, parseYmd: parseYmd, shiftDate: shiftDate, dayDiff: dayDiff, addDays: addDays,
     remNote: remNote, occursOn: occursOn, eventsOn: eventsOn, catById: catById, hm: hm, toast: toast, mark: mark, normRep: normRep, remMinutes: remMinutes,
