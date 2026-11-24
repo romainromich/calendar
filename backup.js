@@ -225,7 +225,7 @@
     persisted().then(function (ok) {
       persistEl.replaceChildren(ok === null ? 'Браузер не сообщает о защите хранилища.' :
         ok ? 'Хранилище защищено: браузер не будет стирать данные сам.' : 'Хранилище не защищено: при нехватке места браузер может стереть данные. Установка на главный экран обычно включает защиту.',
-        ok === false ? h('button', { type: 'button', class: 'btn', style: 'margin-left:8px', onclick: function () { askPersist().then(function (g) { C.toast(g ? 'Защита включена.' : 'Браузер пока не дал защиту. Попробуйте после установки на главный экран.'); renderPersist(); }); } }, 'Запросить защиту') : null);
+        ok === false ? h('button', { type: 'button', class: 'btn', style: 'margin-left:8px', onclick: function () { askPersist().then(function (g) { C.toast(g ? 'Защита включена.' : 'Браузер пока не дал защиту. Попробуйте после установки на главный экран.'); renderPersist(); }); } }, 'Запросить защиту') : '');
     });
   }
   function renderSnaps() {
@@ -255,7 +255,7 @@
     var passIn = h('input', { type: 'password', autocomplete: 'new-password', placeholder: 'Пароль (не меньше 8 символов)', hidden: true,
       oninput: function () { filePass = passIn.value.length >= 8 ? passIn.value : ''; passNote.textContent = passIn.value && !filePass ? 'Пароль короткий: нужно хотя бы 8 символов.' : filePass ? 'Файл будет зашифрован. Без пароля его не открыть, восстановить пароль нельзя.' : ''; } });
     var passNote = h('div', { class: 'mute small' });
-    var passBox = h('label', { class: 'chk', style: 'display:flex;align-items:center;gap:8px;margin:10px 0 6px' },
+    var passBox = h('label', { class: 'pass-toggle', style: 'display:flex;align-items:center;gap:8px;margin:10px 0 6px;width:fit-content;cursor:pointer' },
       h('input', { type: 'checkbox', onchange: function (e) { passIn.hidden = !e.target.checked; if (!e.target.checked) { passIn.value = ''; filePass = ''; passNote.textContent = ''; } else passIn.focus(); } }),
       'Защитить файл паролем');
     var sec = h('div', { class: 'set-sec' }, h('h3', null, 'Резервная копия и перенос'),
