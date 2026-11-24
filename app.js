@@ -317,7 +317,10 @@
     if (c && typeof c.rem === 'number') return c.rem;
     return typeof S.settings.remDefault === 'number' ? S.settings.remDefault : null;
   }
-  function isKey(e) { return e.cat === 'deadline' || /коллок|экзамен|зач[её]т|дедлайн|контрольн|защит|сдать/i.test(e.title); }
+  function isKey(e) {
+    if (e.prepFor || (e._m && e._m.prepFor)) return false;   // «Подготовка: коллоквиум» — не сам коллоквиум
+    return e.cat === 'deadline' || /коллок|экзамен|зач[её]т|дедлайн|контрольн|защит|сдать/i.test(e.title);
+  }
   function evLabel(e) { return (e._cont ? '↪ ' : '') + (isKey(e) ? '⚑ ' : '') + e.title; }
   /* мягкие переносы для узких колонок недели: «Програм-мирование», а не «Программир / ование» */
   function shy(text) {
@@ -894,13 +897,14 @@
     if (!m.rep || scope === 'all' || (scope === 'following' && od === m.date)) {
       var delta = patch.date ? dayDiff(patch.date, od) : 0;
       copyFields(m);
-      if (delta) m.date = shiftDate(m.date, delta);
+      if (delta) { m.date = shiftDate(m.date, delta); retagPrep(m.id, m.id, function (d) { return shiftDate(d, delta); }); }
       if ('rep' in patch) { m.rep = patch.rep; if (!patch.rep) m.ex = []; }
       mark(m);
     } else if (scope === 'one') {
       m.ex = (m.ex || []).concat(od); mark(m);
       var one = Object.assign(baseFields(m), { id: uid(), date: patch.date || od, rep: null, ex: [] });
       copyFields(one); S.events.push(mark(one));
+      retagPrep(m.id, one.id, function (d) { return d === od ? one.date : null; });
     } else {
       var oldEx = m.ex || [];
       var next = Object.assign(baseFields(m), { id: uid(), date: patch.date || od, rep: normRep(m.rep), ex: oldEx.filter(function (d) { return d >= od; }) });
@@ -909,6 +913,8 @@
       var old = normRep(m.rep); old.until = shiftDate(od, -1);
       m.rep = old; m.ex = oldEx.filter(function (d) { return d < od; }); mark(m);
       S.events.push(mark(next));
+      var shift = patch.date ? dayDiff(patch.date, od) : 0;
+      retagPrep(m.id, next.id, function (d) { return d >= od ? shiftDate(d, shift) : null; });
     }
     save(); render();
     offerUndo(snap, msg || ('title' in patch ? 'Изменения сохранены' : 'end' in patch && !('date' in patch) ? 'Длительность изменена' : 'Событие перемещено'));
@@ -917,12 +923,36 @@
     if (m.gid) S.tomb.push(m.gid);
     S.events = S.events.filter(function (x) { return x !== m; });
   }
+  /* Блоки подготовки помнят своё событие как «id@дата». Когда событие удаляют, удаляем и их;
+     когда переносят — переносим метку, чтобы блоки остались привязаны. */
+  function prepOf(id, test) {
+    return S.events.filter(function (e) {
+      if (!e.prepFor) return false;
+      var p = e.prepFor.split('@');
+      return p[0] === id && (!test || test(p[1]));
+    });
+  }
+  function retagPrep(fromId, toId, mapDate) {
+    prepOf(fromId).forEach(function (e) {
+      var d = mapDate(e.prepFor.split('@')[1]);
+      if (d) { e.prepFor = toId + '@' + d; mark(e); }
+    });
+  }
+  // подготовка к событиям, которых больше нет (например, удалённым до этого исправления)
+  function cleanPrep() {
+    var ids = {};
+    S.events.forEach(function (e) { ids[e.id] = 1; });
+    var gone = S.events.filter(function (e) { return e.prepFor && !ids[e.prepFor.split('@')[0]]; });
+    gone.forEach(dropMaster);
+    if (gone.length) save();
+  }
   function deleteOcc(occ, scope) {
     var snap = snapshot();
-    var m = occ._m, od = occ.date;
-    if (!m.rep || scope === 'all' || (scope === 'following' && od === m.date)) dropMaster(m);
-    else if (scope === 'one') { m.ex = (m.ex || []).concat(od); mark(m); }
-    else { var r = normRep(m.rep); r.until = shiftDate(od, -1); m.rep = r; mark(m); }
+    var m = occ._m, od = occ.date, prep;
+    if (!m.rep || scope === 'all' || (scope === 'following' && od === m.date)) { dropMaster(m); prep = prepOf(m.id); }
+    else if (scope === 'one') { m.ex = (m.ex || []).concat(od); mark(m); prep = prepOf(m.id, function (d) { return d === od; }); }
+    else { var r = normRep(m.rep); r.until = shiftDate(od, -1); m.rep = r; mark(m); prep = prepOf(m.id, function (d) { return d >= od; }); }
+    prep.forEach(dropMaster);
     save(); render();
     offerUndo(snap, '«' + m.title + '» удалено');
   }
@@ -1626,6 +1656,7 @@
   /* ---------- запуск ---------- */
   durOptions($('#taskDur'), 0);
   seed();
+  cleanPrep();
   render();
   setInterval(function () { if (!dragging) renderView(); }, 60000);
   if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(function () {});
