@@ -410,7 +410,7 @@
     var iv = l.weeks === 'all' ? 1 : l.weeks === 'odd' || l.weeks === 'even' ? 2 : 4;
     return { id: C.uid(), title: l.title, date: date, start: l.start, end: l.end, cat: o.cat, notes: l.note || '',
       place: l.room || undefined, teacher: l.teacher || undefined, kind: l.kind || undefined,
-      rep: { type: 'weekly', interval: iv, days: [jsDay], until: o.until }, ex: [], imp: o.batch };
+      rep: { type: 'weekly', interval: iv, days: [jsDay], until: o.until }, ex: [], imp: o.batch, lesson: true };
   }
 
   /* ---------- окно ---------- */
@@ -604,7 +604,7 @@
       var ev;
       if (r.ics) {
         ev = { id: C.uid(), title: r.title, date: r.date, start: r.start, end: r.end, allDay: r.allDay || undefined, cat: o.cat, notes: r.note || '',
-          place: r.room || undefined, kind: r.kind || undefined, rep: r.rep ? C.normRep(r.rep) : null, ex: r.ex || [], imp: batch };
+          place: r.room || undefined, kind: r.kind || undefined, rep: r.rep ? C.normRep(r.rep) : null, ex: r.ex || [], imp: batch, lesson: true };
       } else ev = makeEvent(r, Object.assign({ batch: batch }, o));
       if (!ev) { skipped++; return; }
       S().events.push(C.mark(ev)); made++;

@@ -476,17 +476,23 @@
 
   /* текст напоминания: что, когда, где; для пар — тип занятия и аудитория */
   var LESSON = [[/лекци/i, 'лекция'], [/семинар/i, 'семинар'], [/практи/i, 'практика'], [/лаб/i, 'лабораторная'], [/коллок/i, 'коллоквиум'], [/экзамен/i, 'экзамен'], [/зач[её]т/i, 'зачёт'], [/консульт/i, 'консультация']];
+  // Занятие или обычное событие. Если человек выбрал сам (поле lesson), верим ему. У старых событий
+  // угадываем по признакам пары: вид, преподаватель, импорт расписания или слово «лекция»/«пара» в названии.
+  // Календарь «Учёба» сам по себе занятием не делает: «Скинуть бдз» — это не пара.
   function isLesson(e) {
-    var c = catById(e.cat);
+    var m = e._m || e;
+    if (m.lesson === true || m.lesson === false) return m.lesson;
+    if (m.kind || m.teacher || m.imp) return true;
+    var c = catById(m.cat);
     if (c.id === 'deadline' || /дедлайн|срок/i.test(c.name || '')) return false;
-    return c.id === 'study' || /уч[её]б|пары|универ|миэт/i.test(c.name || '') || /(^|[^а-яё])пара([^а-яё]|$)|лекци|семинар/i.test(e.title + ' ' + (e.notes || ''));
+    return /(^|[^а-яё])пара([^а-яё]|$)|лекци|семинар|практическ|лабораторн/i.test(m.title || '');
   }
   /* тип занятия, аудитория, преподаватель — для «Дня» и уведомлений */
   function lessonInfo(e) {
-    var where = (e.place || '').trim(), lesson = isLesson(e) || !!e.kind, kind = e.kind || '';
+    var lesson = isLesson(e), where = (e.place || '').trim(), kind = lesson ? e.kind || '' : '';
     if (lesson && !kind) LESSON.some(function (x) { if (x[0].test(e.title + ' ' + (e.notes || ''))) { kind = x[1]; return true; } return false; });
-    if (where && /^[\dА-Яа-яA-Za-z]{0,2}-?\d{2,4}[а-яa-z]?$/i.test(where)) where = 'ауд. ' + where;     // «3204», «4-401» → «ауд. 3204»
-    return { lesson: lesson, kind: kind, where: where, teacher: (e.teacher || '').trim() };
+    if (lesson && where && /^[\dА-Яа-яA-Za-z]{0,2}-?\d{2,4}[а-яa-z]?$/i.test(where)) where = 'ауд. ' + where;     // «3204», «4-401» → «ауд. 3204»
+    return { lesson: lesson, kind: kind, where: where, teacher: lesson ? (e.teacher || '').trim() : '' };
   }
   function remNote(e, mins) {
     var li = lessonInfo(e), where = li.where, lesson = li.lesson, kind = li.kind;
@@ -894,10 +900,10 @@
   }
 
   /* ---------- изменение событий и повторов ---------- */
-  var FIELDS = ['title', 'start', 'end', 'cat', 'notes', 'allDay', 'days', 'rem', 'obs', 'place', 'travel', 'teacher', 'kind', 'imp'];
+  var FIELDS = ['title', 'start', 'end', 'cat', 'notes', 'allDay', 'days', 'rem', 'obs', 'place', 'travel', 'teacher', 'kind', 'imp', 'lesson'];
   function baseFields(m) {
     return { title: m.title, start: m.start, end: m.end, cat: m.cat, notes: m.notes || '', allDay: m.allDay, days: m.days, rem: m.rem, obs: m.obs,
-      place: m.place, travel: m.travel, teacher: m.teacher, kind: m.kind, imp: m.imp };
+      place: m.place, travel: m.travel, teacher: m.teacher, kind: m.kind, imp: m.imp, lesson: m.lesson };
   }
 
   /* ---------- «Отменить» ---------- */
@@ -1172,6 +1178,24 @@
   function remToValue(r) { return r === undefined ? 'def' : r === null ? 'none' : String(r); }
   function valueToRem(v) { return v === 'def' ? undefined : v === 'none' ? null : +v; }
 
+  var KINDS = ['', 'лекция', 'практика', 'семинар', 'лабораторная', 'консультация', 'коллоквиум', 'зачёт', 'экзамен'];
+  function setEvType(les) {
+    var box = $('#evType');
+    box.dataset.v = les ? '1' : '0';
+    Array.prototype.forEach.call(box.children, function (b) { b.setAttribute('aria-checked', b.dataset.v === box.dataset.v ? 'true' : 'false'); });
+    $('#evLessonRow').hidden = !les;
+    $('#evPlaceWrap').hidden = les;          // у занятия место — это аудитория в строке выше
+  }
+  $('#evType').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-v]');
+    if (!b) return;
+    var les = b.dataset.v === '1', was = $('#evType').dataset.v === '1';
+    if (les === was) return;
+    // место переезжает между «Место» и «Аудитория», чтобы не потерялось
+    if (les && !$('#evRoom').value) { $('#evRoom').value = $('#evPlace').value; $('#evPlace').value = ''; }
+    if (!les && !$('#evPlace').value) { $('#evPlace').value = $('#evRoom').value; $('#evRoom').value = ''; }
+    setEvType(les);
+  });
   function openEvent(ev, preset) {
     if (ev && ev._cont) ev = Object.assign({}, ev._m, { date: ev._from, _m: ev._m });
     editing = ev;
@@ -1187,8 +1211,14 @@
     $('#evRem').value = remToValue(d.rem);
     $('#evNotes').value = d.notes || '';
     $('#evObsSync').hidden = !(d.obs || '').trim();
-    $('#evPlace').value = d.place || '';
+    var les = isLesson(d);
+    setEvType(les);
+    $('#evPlace').value = les ? '' : d.place || '';
+    $('#evRoom').value = les ? d.place || '' : '';
     $('#evTeacher').value = d.teacher || '';
+    var ks = $('#evKind'), kv = d.kind || '';
+    ks.replaceChildren.apply(ks, KINDS.concat(KINDS.indexOf(kv) < 0 && kv ? [kv] : []).map(function (k) { return h('option', { value: k }, k || 'пара'); }));
+    ks.value = kv;
     var tset = {};
     S.events.forEach(function (x) { if (x.teacher) tset[x.teacher] = 1; });
     $('#evTeacherList').replaceChildren.apply($('#evTeacherList'), Object.keys(tset).sort().map(function (t) { return h('option', { value: t }); }));
@@ -1197,12 +1227,11 @@
     // «Ещё» раскрыто, если там что-то заполнено; в подсказке — что именно
     var filled = [];
     if (d.rem !== undefined) filled.push('напоминание');
-    if (d.place || d.travel) filled.push(d.place ? d.place : 'дорога');
-    if (d.teacher) filled.push(d.teacher);
+    if ((!les && d.place) || d.travel) filled.push(!les && d.place ? d.place : 'дорога');
     if ((d.notes || '').trim()) filled.push('заметка');
     if ((d.obs || '').trim()) filled.push('Obsidian');
     $('#evMore').open = filled.length > 0;
-    $('#evMoreHint').textContent = filled.length ? filled.join(' · ') : 'напоминание, место, преподаватель, заметка, Obsidian';
+    $('#evMoreHint').textContent = filled.length ? filled.join(' · ') : 'напоминание, место, заметка, Obsidian';
     var preset = repPreset(rep);
     var rs = $('#evRep');
     rs.replaceChildren.apply(rs, REMOVE_KEEP(REPS, preset === 'keep').map(function (r) { return h('option', { value: r[0] }, r[1]); }));
@@ -1288,7 +1317,12 @@
     }
     var data = { title: $('#evTitle').value.trim() || 'Событие', date: $('#evDate').value, start: s0, end: en, cat: $('#evCat').value, notes: $('#evNotes').value,
       allDay: allDay || undefined, rem: valueToRem($('#evRem').value), obs: $('#evObs').value.trim() || undefined,
-      place: $('#evPlace').value.trim() || undefined, teacher: $('#evTeacher').value.trim() || undefined, travel: (!allDay && +$('#evTravel').value) || undefined };
+      travel: (!allDay && +$('#evTravel').value) || undefined };
+    var les = $('#evType').dataset.v === '1';
+    data.lesson = les;
+    data.place = (les ? $('#evRoom').value : $('#evPlace').value).trim() || undefined;
+    data.teacher = les ? $('#evTeacher').value.trim() || undefined : undefined;
+    data.kind = les ? $('#evKind').value || undefined : undefined;
     if (data.place && data.travel) { (S.settings.places || (S.settings.places = {}))[data.place.toLowerCase()] = data.travel; }
     if (!allDay) data.days = undefined; else if (editing && editing._m.days) data.days = editing._m.days;
     var occ = editing;
