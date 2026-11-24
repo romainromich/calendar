@@ -534,7 +534,7 @@
     function paintWeek() {
       if (!sem.value) { weekNote.textContent = ''; return; }
       var n = weekNo(new Date(), sem.value);
-      weekNote.textContent = n >= 1 ? 'Сейчас идёт ' + n + '-я неделя — ' + (n % 2 ? 'числитель' : 'знаменатель') + '. Если это не так, поправьте дату начала семестра.' : 'Семестр ещё не начался.';
+      weekNote.textContent = n >= 1 ? 'Первая неделя семестра — числитель, сейчас идёт ' + n + '-я — ' + (n % 2 ? 'числитель' : 'знаменатель') + '. Если это не так, поправьте дату начала семестра.' : 'Семестр ещё не начался.';
     }
     paintWeek();
 
@@ -573,11 +573,11 @@
     paintRows(); count();
 
     var settings = ics ? h('div', { class: 'imp-opts' }, h('label', null, 'Календарь', cat)) : h('div', { class: 'imp-opts' },
-      h('label', null, 'Начало семестра (1-я неделя — числитель)', sem),
+      h('label', null, 'Начало семестра', sem),
       h('label', null, 'Добавлять с', from),
       h('label', null, 'Повторять до', until),
       h('label', null, 'Календарь', cat));
-    dlg.replaceChildren(
+    dlg.replaceChildren.apply(dlg, [
       head('Проверьте занятия', (state.note || '') + (state.src === 'image' ? 'Распознано нейросетью — проверьте недели и аудитории. ' : '') + 'Снимите галочку, чтобы пропустить занятие.'),
       settings, ics ? null : weekNote,
       demo ? h('label', { class: 'imp-replace' }, dropDemo, ' Удалить демонстрационное расписание') : null,
@@ -587,7 +587,8 @@
         tbody)),
       h('div', { class: 'dlg-actions' }, go,
         h('button', { type: 'button', class: 'btn', onclick: function () { stepSource(); } }, 'Назад'),
-        h('button', { type: 'button', class: 'btn', onclick: close }, 'Отмена')));
+        h('button', { type: 'button', class: 'btn', onclick: close }, 'Отмена'))
+    ].filter(Boolean));   // null в replaceChildren превращается в текст «null»
   }
 
   function apply(o) {

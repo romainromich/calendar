@@ -820,7 +820,7 @@ dialog#setDialog{width:min(920px,95vw);padding-top:0}
 .imp-err{color:#E03131}
 .imp-busy::before{content:"";display:inline-block;width:12px;height:12px;margin-right:8px;border:2px solid var(--accent);border-right-color:transparent;border-radius:50%;vertical-align:-1px;animation:impSpin .8s linear infinite}
 @keyframes impSpin{to{transform:rotate(360deg)}}
-.imp-opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 12px;margin-bottom:6px}
+.imp-opts{display:grid;align-items:end;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 12px;margin-bottom:6px}
 .imp-opts label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mute)}
 .imp-replace{display:flex;align-items:center;gap:6px;margin:8px 0;font-size:14px}
 .imp-table{overflow:auto;max-height:52vh;border:1px solid var(--line);border-radius:10px;margin-top:10px}
