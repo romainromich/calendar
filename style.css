@@ -847,21 +847,26 @@ dialog.imp-dlg{width:min(1080px,96vw)}
 .acc-row:last-child{border-bottom:0}
 .acc-row .mute{flex:1 1 220px}
 .acc-inv{margin:10px 0;padding:10px 12px;border:1px dashed var(--line);border-radius:12px}
-/* плашка демонстрационного расписания */
-.demo-bar{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:10px 16px 0;padding:12px 44px 12px 16px;border-radius:14px;
-  background:var(--accentSoft);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+/* подсказка про демо: на компьютере — одна узкая строка */
+.demo-bar{display:flex;align-items:center;gap:8px;margin:8px 16px 0;padding:6px 6px 6px 14px;border-radius:12px;
+  background:var(--accentSoft);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
 .demo-bar[hidden]{display:none}
-.demo-txt{flex:1 1 320px;display:flex;flex-direction:column;gap:2px;min-width:0}
-.demo-txt b{font-size:1.08em}
-.demo-txt span{color:var(--mute)}
-.demo-act{display:flex;flex-wrap:wrap;gap:8px}
-.demo-x{position:absolute;top:8px;right:8px}
-@media (max-width:760px){
-  .demo-bar{margin:4px 12px 8px;padding:10px 40px 12px 14px;gap:8px}
-  .demo-txt span{font-size:.92em;line-height:1.3}
-  .demo-act{flex:1 1 100%;flex-wrap:nowrap}
-  .demo-act .btn{flex:1 1 0;min-height:38px;padding:0 10px;white-space:nowrap}
-  .demo-long{display:none}
+.demo-txt{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--mute)}
+.demo-txt b{color:var(--ink);font-weight:600}
+.demo-bar .btn{min-height:32px;height:32px;padding:0 14px;white-space:nowrap;flex:none}
+@media(max-width:1500px){.demo-tail{display:none}}
+#demoPill{display:none}
+/* на телефоне — маленькая кнопка над нижним меню и шторка по нажатию */
+@media(max-width:760px){
+  .demo-bar{display:none}
+  #demoPill{display:flex;align-items:center;gap:8px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom));z-index:17;
+    max-width:calc(100vw - 24px);height:40px;padding:0 6px 0 14px;border-radius:20px;border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);
+    background:color-mix(in srgb,var(--panel) 90%,transparent);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);color:var(--ink);font:inherit;font-size:14px;font-weight:600;white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,.3)}
+  #demoPill[hidden]{display:none}
+  #demoPill .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+  #demoPill .go{margin-left:4px;padding:0 12px;height:30px;line-height:30px;border-radius:15px;background:var(--accent);color:var(--onaccent);font-size:13px}
+  .demo-sheet-act{display:grid;gap:8px}
+  .demo-sheet-act .btn{width:100%;min-height:46px}
 }
 /* компьютер: при прокрутке шапка и строка дат недели остаются наверху и закрывают сетку,
    а не просвечивают и не перечёркивают даты */

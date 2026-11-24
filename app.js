@@ -187,20 +187,39 @@
     save(); render();
     if (!silent) offerUndo(snap, 'Демонстрационное расписание удалено');
   }
-  /* плашка над календарём, пока есть демо и её не скрыли */
+  /* Подсказка про демо. На компьютере — узкая строка над календарём, на телефоне — маленькая
+     кнопка над нижним меню (сверху её закрывает затемнение при прокрутке), по нажатию — шторка. */
+  function demoImport() { if (window.CalImport) window.CalImport.open(); }
+  function demoHide() { S.settings.demoBarHidden = true; save(); renderDemoBar(); }
+  function demoSheet() {
+    var dlg = h('dialog', { class: 'demo-sheet' });
+    var close = function () { dlg.close(); };
+    dlg.addEventListener('close', function () { dlg.remove(); });
+    dlg.append(
+      h('h2', null, 'Это демонстрационное расписание'),
+      h('p', { class: 'mute', style: 'margin:0 0 16px' }, 'Оно показывает, как всё устроено: пары по числителю и знаменателю, аудитории, задачи и привычки. Загрузите своё расписание — демо удалится.'),
+      h('div', { class: 'demo-sheet-act' },
+        h('button', { type: 'button', class: 'btn primary', onclick: function () { close(); demoImport(); } }, 'Загрузить своё расписание'),
+        h('button', { type: 'button', class: 'btn', onclick: function () { close(); clearDemo(); } }, 'Удалить демо'),
+        h('button', { type: 'button', class: 'btn', onclick: function () { close(); demoHide(); } }, 'Скрыть подсказку')));
+    document.body.append(dlg);
+    dlg.showModal();
+  }
   function renderDemoBar() {
-    var bar = $('#demoBar');
+    var bar = $('#demoBar'), pill = $('#demoPill');
     if (!bar) return;
-    if (!hasDemo() || S.settings.demoBarHidden) { bar.hidden = true; bar.replaceChildren(); return; }
-    bar.hidden = false;
+    if (!pill) {
+      pill = h('button', { type: 'button', id: 'demoPill', onclick: demoSheet }, h('span', { class: 'dot' }), 'Демо-расписание', h('span', { class: 'go' }, 'Загрузить своё'));
+      document.body.append(pill);
+    }
+    var off = !hasDemo() || S.settings.demoBarHidden;
+    bar.hidden = pill.hidden = off;
+    if (off) { bar.replaceChildren(); return; }
     bar.replaceChildren(
-      h('div', { class: 'demo-txt' },
-        h('b', null, 'Это демонстрационное расписание'),
-        h('span', null, 'Оно показывает, как всё устроено: пары по числителю и знаменателю, аудитории, задачи и привычки. Загрузите своё расписание — демо удалится.')),
-      h('div', { class: 'demo-act' },
-        h('button', { type: 'button', class: 'btn primary', onclick: function () { if (window.CalImport) window.CalImport.open(); } }, 'Загрузить своё', h('span', { class: 'demo-long' }, ' расписание')),
-        h('button', { type: 'button', class: 'btn', onclick: function () { clearDemo(); } }, 'Удалить демо')),
-      h('button', { type: 'button', class: 'icon-btn sm demo-x', 'aria-label': 'Скрыть плашку', title: 'Скрыть плашку (демо останется)', onclick: function () { S.settings.demoBarHidden = true; save(); renderDemoBar(); } }, '×'));
+      h('span', { class: 'demo-txt', title: 'Оно показывает, как всё устроено. Загрузите своё расписание — демо удалится.' }, h('b', null, 'Это демонстрационное расписание'), h('span', { class: 'demo-tail' }, ' — загрузите своё, и оно удалится')),
+      h('button', { type: 'button', class: 'btn primary', onclick: demoImport }, 'Загрузить своё расписание'),
+      h('button', { type: 'button', class: 'btn', onclick: function () { clearDemo(); } }, 'Удалить демо'),
+      h('button', { type: 'button', class: 'icon-btn sm', 'aria-label': 'Скрыть подсказку', title: 'Скрыть подсказку (демо останется)', onclick: demoHide }, '×'));
   }
 
   /* ---------- даты и вид ---------- */
