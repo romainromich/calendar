@@ -291,6 +291,12 @@ async function handle(req, env) {
     const lim = me.owner ? 0 : (+env.AI_USER_LIMIT || AI_USER_DAY);
     return json({ uid: me.uid, name: me.name, owner: !!me.owner, ai: { used: await aiUsed(env, me.uid), limit: lim } });
   }
+  if (url.pathname === '/link') {
+    // одноразовый код на 10 минут, чтобы войти тем же человеком на другом устройстве
+    const code = inviteCode();
+    await env.KV.put('lnk:' + code, JSON.stringify({ uid: me.uid, exp: Date.now() + 600000 }), { expirationTtl: 600 });
+    return json({ code, exp: Date.now() + 600000 });
+  }
   if (url.pathname.startsWith('/admin/')) {
     if (!me.owner) return json({ error: 'owner' }, 403);
     return admin(url.pathname.slice(7), body, env, json);
@@ -349,16 +355,32 @@ async function join(req, env, json) {
   let b;
   try { b = JSON.parse(await req.text()); } catch (e) { return json({ error: 'json' }, 400); }
   const code = String(b && b.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const a = await acl(env), inv = a.inv[code];
-  if (!/^[A-Z0-9]{8}$/.test(code) || !inv || inv.left <= 0 || inv.exp < Date.now()) return json({ error: 'code', message: 'Код приглашения не подошёл: проверьте его или попросите новый' }, 404);
-  const tok = hex(24), h = await sha(tok), uid = hex(5);
+  const bad = () => json({ error: 'code', message: 'Код не подошёл: проверьте его или попросите новый' }, 404);
+  if (!/^[A-Z0-9]{8}$/.test(code)) return bad();
+  const a = await acl(env), inv = a.inv[code], tok = hex(24), h = await sha(tok);
+  if (!inv) {
+    // код входа на другом устройстве: тот же человек, новый токен
+    const ln = await env.KV.get('lnk:' + code, 'json');
+    if (!ln || ln.exp < Date.now()) return bad();
+    await env.KV.delete('lnk:' + code);
+    const u = ln.uid === 'owner' ? { uid: 'owner', name: 'Владелец', owner: true, t: Date.now() } : a.users[ln.uid] && { uid: ln.uid, name: a.users[ln.uid].name, t: Date.now() };
+    if (!u) return bad();
+    await env.KV.put('u:' + h, JSON.stringify(u));
+    if (u.owner) a.owner = (a.owner || []).concat(h).slice(-20);
+    else a.users[u.uid].hs = hashes(a.users[u.uid]).concat(h).slice(-20);
+    await saveAcl(env, a);
+    return json({ token: tok, uid: u.uid, name: u.name });
+  }
+  if (inv.left <= 0 || inv.exp < Date.now()) return bad();
+  const uid = hex(5);
   const u = { uid, name: inv.label || 'Тестировщик', t: Date.now() };
   await env.KV.put('u:' + h, JSON.stringify(u));
-  a.users[uid] = { name: u.name, t: u.t, h };
+  a.users[uid] = { name: u.name, t: u.t, hs: [h] };
   if (--inv.left <= 0) delete a.inv[code];
   await saveAcl(env, a);
   return json({ token: tok, uid, name: u.name });
 }
+const hashes = (u) => (u.hs || []).concat(u.h ? [u.h] : []).filter((x, i, l) => l.indexOf(x) === i);
 
 /* Управление тестировщиками — только для владельца */
 async function admin(cmd, b, env, json) {
@@ -373,7 +395,7 @@ async function admin(cmd, b, env, json) {
   if (cmd === 'users') {
     const idx = await index(env), day = today();
     const list = await Promise.all(Object.entries(a.users).map(async ([uid, u]) => ({
-      uid, name: u.name, t: u.t, ai: +(await env.KV.get('ai:' + uid + ':' + day)) || 0,
+      uid, name: u.name, t: u.t, ai: +(await env.KV.get('ai:' + uid + ':' + day)) || 0, logins: hashes(u).length,
       devices: Object.values(idx).filter((d) => d.uid === uid).length
     })));
     const ownerAi = +(await env.KV.get('ai:owner:' + day)) || 0;
@@ -382,8 +404,7 @@ async function admin(cmd, b, env, json) {
   if (cmd === 'revoke') {
     const u = a.users[b.uid];
     if (!u) return json({ error: 'unknown' }, 404);
-    await env.KV.delete('u:' + u.h);
-    users.delete(u.h);
+    for (const h of hashes(u)) { await env.KV.delete('u:' + h); users.delete(h); }
     delete a.users[b.uid];
     await saveAcl(env, a);
     const idx = await index(env);

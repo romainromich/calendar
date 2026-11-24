@@ -73,8 +73,8 @@
     };
     inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') go.click(); });
     return [
-      h('p', { class: 'mute small', style: 'margin-top:0' }, 'Push-уведомления, синхронизация между устройствами и распознавание расписания по скриншоту работают через сервер. Чтобы ими пользоваться, введите код приглашения, который вам прислали.'),
-      h('label', { class: 'field' }, 'Код приглашения', inp),
+      h('p', { class: 'mute small', style: 'margin-top:0' }, 'Push-уведомления, синхронизация между устройствами и распознавание расписания по скриншоту работают через сервер. Чтобы ими пользоваться, введите код приглашения, который вам прислали, или код входа, созданный на другом вашем устройстве.'),
+      h('label', { class: 'field' }, 'Код приглашения или код входа', inp),
       h('div', { class: 'cs-row' }, go),
       st
     ];
@@ -85,7 +85,7 @@
   }
   function paint() {
     if (!box) return;
-    var kids;
+    var kids, linkBox = h('div');
     if (!C.srvToken()) kids = loginForm();
     else if (!me) kids = [h('p', { class: 'mute small' }, 'Проверяю доступ…')];
     else if (me.bad) { kids = loginForm('Сохранённый код больше не действует. Попросите новый код приглашения.'); }
@@ -95,11 +95,34 @@
       kids = [
         h('p', { style: 'margin-top:0' }, me.owner ? 'Вы владелец сервера.' : 'Вы вошли как ', me.owner ? null : h('b', null, me.name), me.owner ? null : '.'),
         h('p', { class: 'mute small' }, aiLine(me.ai)),
-        h('div', { class: 'cs-row' }, h('button', { type: 'button', class: 'btn', onclick: logout }, 'Выйти'))
+        h('div', { class: 'cs-row' }, h('button', { type: 'button', class: 'btn', onclick: function () { linkOther(linkBox); } }, 'Войти на другом устройстве'), h('button', { type: 'button', class: 'btn', onclick: logout }, 'Выйти')),
+        linkBox
       ];
       if (me.owner) kids.push(ownerPanel());
     }
     box.replaceChildren.apply(box, kids.filter(Boolean));
+  }
+
+  /* одноразовый код на 10 минут: на другом устройстве ввести его как код приглашения или открыть ссылку */
+  function linkOther(out) {
+    out.replaceChildren(h('p', { class: 'mute small' }, 'Создаю код…'));
+    post('/link').then(function (j) {
+      var url = link(j.code), left = h('span', { class: 'mute small' }), timer;
+      function tick() {
+        var s = Math.max(0, Math.round((j.exp - Date.now()) / 1000));
+        left.textContent = s ? 'действует ещё ' + Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2) : 'код истёк, создайте новый';
+        if (!s || !out.isConnected) clearInterval(timer);
+      }
+      out.replaceChildren(h('div', { class: 'acc-inv' },
+        h('p', { class: 'small', style: 'margin-top:0' }, 'На другом устройстве откройте календарь → Настройки → Доступ к серверу и введите этот код. Или откройте там ссылку — например, отправьте её себе в мессенджер.'),
+        h('div', { class: 'cs-row' }, h('code', { class: 'cs-key' }, fmtCode(j.code)), left),
+        h('div', { class: 'cs-row' },
+          h('button', { type: 'button', class: 'btn', onclick: function () { copy(url, 'Ссылка'); } }, 'Копировать ссылку'),
+          h('button', { type: 'button', class: 'btn', onclick: function () { copy(fmtCode(j.code), 'Код'); } }, 'Копировать код'),
+          navigator.share ? h('button', { type: 'button', class: 'btn', onclick: function () { navigator.share({ text: 'Вход в My Calendar: ' + url }).catch(function () { /* отменили */ }); } }, 'Отправить…') : null),
+        h('p', { class: 'mute small' }, 'Код одноразовый. Синхронизацию данных между устройствами включите отдельно: Настройки → Синхронизация устройств.')));
+      tick(); timer = setInterval(tick, 1000);
+    }, function (e) { out.replaceChildren(h('p', { class: 'small imp-err' }, e.message + (e.status === 404 ? ' (обновите код воркера)' : ''))); });
   }
 
   /* ---------- владелец: приглашения и тестировщики ---------- */
@@ -148,7 +171,7 @@
       j.users.forEach(function (u) {
         rows.push(h('div', { class: 'acc-row' },
           h('b', null, u.name),
-          h('span', { class: 'mute small' }, 'с ' + dt(u.t) + ' · картинок сегодня: ' + u.ai + ' из ' + j.limit + ' · устройств с push: ' + u.devices),
+          h('span', { class: 'mute small' }, 'с ' + dt(u.t) + ' · картинок сегодня: ' + u.ai + ' из ' + j.limit + ' · вошёл на устройствах: ' + (u.logins || 1) + ' · с push: ' + u.devices),
           h('button', { type: 'button', class: 'btn danger', onclick: function () {
             if (!confirm('Отключить «' + u.name + '» от сервера? У этого человека перестанут работать push, синхронизация и распознавание. Его данные на устройстве останутся.')) return;
             post('/admin/revoke', { uid: u.uid }).then(function () { C.toast('Отключено'); loadUsers(list); }, function (e) { C.toast(e.message); });
