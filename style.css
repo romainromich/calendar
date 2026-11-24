@@ -431,7 +431,7 @@ input[type=color]{width:44px;height:28px;padding:0;border:1px solid var(--line);
   #app{position:relative;z-index:1;gap:14px;padding:14px;grid-template-columns:248px minmax(0,1fr) 312px}
   #side,#right,#center{border:1px solid var(--line);border-radius:28px;background:color-mix(in srgb,var(--panel) 78%,transparent);-webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%)}
   #side{top:14px;height:calc(100vh - 28px);padding:18px}
-  #right{top:14px;height:calc(100vh - 28px);background:transparent;border:0;-webkit-backdrop-filter:none;backdrop-filter:none;padding:0;gap:14px}
+  #right{top:14px;height:calc(100vh - 28px);background:transparent;border:0;border-radius:0;-webkit-backdrop-filter:none;backdrop-filter:none;padding:0;gap:14px}
   #right section{background:color-mix(in srgb,var(--panel) 78%,transparent);border:1px solid var(--line);border-radius:24px;padding:16px;-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}
   #center{min-height:calc(100vh - 28px);overflow:clip}
   #topbar{background:transparent;border-bottom:1px solid var(--line);padding:14px 18px;gap:10px}
