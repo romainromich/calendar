@@ -210,5 +210,5 @@
   ['evStart', 'evEnd'].forEach(function (id) { enhance(document.getElementById(id), 'wheel'); });
   enhance(document.getElementById('habitAt'), 'list');
 
-  window.CalTime = { wheel: wheel, list: list, enhance: enhance, parse: parse, fmt: fmt };
+  window.CalTime = { wheel: wheel, list: list, enhance: enhance, parse: parse, fmt: fmt, popover: popover, place: place, isOpen: function (a) { return !!(cur && cur.anchor === a); } };
 })();
