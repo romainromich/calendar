@@ -1657,6 +1657,12 @@
   durOptions($('#taskDur'), 0);
   seed();
   cleanPrep();
+  // высота шапки — чтобы строка дат недели прилипала прямо под ней
+  (function () {
+    var tb = $('#topbar'), set = function () { document.documentElement.style.setProperty('--tbh', tb.offsetHeight + 'px'); };
+    if (tb && window.ResizeObserver) new ResizeObserver(set).observe(tb);
+    if (tb) set();
+  })();
   render();
   setInterval(function () { if (!dragging) renderView(); }, 60000);
   if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(function () {});

@@ -863,3 +863,10 @@ dialog.imp-dlg{width:min(1080px,96vw)}
   .demo-act .btn{flex:1 1 0;min-height:38px;padding:0 10px;white-space:nowrap}
   .demo-long{display:none}
 }
+/* компьютер: при прокрутке шапка и строка дат недели остаются наверху и закрывают сетку,
+   а не просвечивают и не перечёркивают даты */
+@media(min-width:761px){
+  #topbar{background:color-mix(in srgb,var(--panel) 94%,transparent);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-radius:27px 27px 0 0}
+  .wk{overflow-x:clip}
+  .wk-head:not(.wk-allday){position:sticky;top:var(--tbh,67px);z-index:7;background:color-mix(in srgb,var(--panel) 94%,transparent);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+}
