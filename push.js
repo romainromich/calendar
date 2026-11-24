@@ -21,7 +21,7 @@
   }
   function post(path, body) {
     return fetch(base() + path, { method: 'POST', headers: C.srvHeaders(), body: JSON.stringify(body) }).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) { var e = new Error(r.status === 401 ? 'неверный код доступа к серверу (Настройки → Синхронизация устройств)' : r.status === 429 ? 'слишком много запросов, попробуйте позже' : j.error || ('HTTP ' + r.status)); e.status = r.status; throw e; } return j; });
+      return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) { var e = new Error(r.status === 401 ? 'нет доступа к серверу: войдите по коду приглашения (Настройки → Доступ к серверу)' : r.status === 429 ? (j.message || 'слишком много запросов, попробуйте позже') : j.message || j.error || ('HTTP ' + r.status)); e.status = r.status; throw e; } return j; });
     });
   }
   function setStatus(t) { if (statusEl) statusEl.textContent = t; }

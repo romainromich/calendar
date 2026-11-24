@@ -842,3 +842,8 @@ dialog#setDialog{width:min(920px,95vw);padding-top:0}
 .imp-dlg .imp-table input,.imp-dlg .imp-table select{padding:2px 6px!important;height:30px!important;min-height:0!important;border-radius:6px!important;font-size:13px!important}
 dialog.imp-dlg{width:min(1080px,96vw)}
 .imp-table td:nth-child(5){width:118px}
+/* доступ к серверу: тестировщики и приглашения */
+.acc-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.acc-row:last-child{border-bottom:0}
+.acc-row .mute{flex:1 1 220px}
+.acc-inv{margin:10px 0;padding:10px 12px;border:1px dashed var(--line);border-radius:12px}

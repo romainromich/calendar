@@ -134,7 +134,8 @@
         return fetch(base() + '/ai/schedule', { method: 'POST', headers: C.srvHeaders(), body: JSON.stringify({ model: model, image: img, prompt: 'v2' }) })
           .then(function (r) { return r.json().then(function (j) { j._status = r.status; return j; }); })
           .then(function (j) {
-            if (j._status === 401) throw Object.assign(new Error('Неверный код доступа к серверу (Настройки → Синхронизация устройств)'), { fatal: true });
+            if (j._status === 401) throw Object.assign(new Error(C.srvToken() ? 'Код доступа больше не действует: войдите заново (Настройки → Доступ к серверу)' : 'Чтобы распознавать скриншоты, войдите по коду приглашения: Настройки → Доступ к серверу'), { fatal: true });
+            if (j.error === 'limit' || j.error === 'quota') throw Object.assign(new Error(j.message), { fatal: true });
             if (j._status === 404) throw Object.assign(new Error('На сервере старая версия: обновите код воркера'), { fatal: true });
             if (j.error === 'no-ai') throw Object.assign(new Error('К серверу не подключён Workers AI'), { fatal: true });
             if (j._status !== 200) { lastErr = new Error(j.message || j.error || 'Сервер ответил ' + j._status); return next(); }
@@ -482,6 +483,15 @@
     timer = setInterval(paint, 1000); paint();
     var fail = function (e) { clearInterval(timer); stepSource(e && e.message ? e.message : String(e)); };
     prepare(files).then(function (prep) {
+      // хватит ли дневного лимита распознаваний на все картинки
+      var acc = window.CalAccount;
+      return (acc && C.srvToken() ? acc.refresh() : Promise.resolve(null)).then(function (me) {
+        var ai = me && me.ai, left = ai && ai.limit ? ai.limit - ai.used : Infinity;
+        if (left <= 0) throw new Error('Сегодня лимит распознаваний исчерпан (' + ai.used + ' из ' + ai.limit + '). Он обновится в 03:00 по Москве; Excel, CSV и .ics можно загрузить без ограничений.');
+        if (prep.parts.length > left) throw new Error('Картинок ' + prep.parts.length + ', а распознаваний на сегодня осталось ' + left + '. Выберите меньше скриншотов или снимите таблицу прокруткой одним куском — тогда скриншоты склеятся в одну картинку.');
+        return prep;
+      });
+    }).then(function (prep) {
       var parts = prep.parts, n = parts.length, done = 0, results = new Array(n), errors = [], next = 0, extra = '';
       if (prep.stitched) say('Склеил ' + files.length + ' скриншотов в одну таблицу. Распознаю…');
       else say(n > 1 ? 'Распознаю 0 из ' + n + '…' : 'Распознаю расписание…');
