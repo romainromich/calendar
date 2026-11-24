@@ -518,8 +518,10 @@
     return chip;
   }
 
+  var lastViewMode = null;
   function renderView() {
     var root = $('#view');
+    if (lastViewMode !== S.settings.view) { lastViewMode = S.settings.view; root.scrollTop = 0; }   // новый вид — с начала, а не с прокрутки прошлого
     if (S.settings.view === 'month') { root.replaceChildren(renderMonth()); return; }
     if (S.settings.view === 'day') { root.replaceChildren(renderAgenda()); return; }
     var days = viewDays(), hh = HH(), hs = S.settings.hourStart, he = S.settings.hourEnd, td = today();

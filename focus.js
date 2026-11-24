@@ -12,14 +12,17 @@
   var raf = 0, lastKey = '', had = false;
 
   function rows() { return Array.prototype.slice.call(view.querySelectorAll('.tl > .tl-row')); }
-  function focusY() { return window.innerHeight * 0.42; }
+  // на компьютере прокручивается сам календарь (#view), на телефоне — страница
+  function sc() { var o = getComputedStyle(view).overflowY; return o === 'auto' || o === 'scroll' ? view : null; }
+  function box() { var s = sc(); if (!s) return { top: 0, h: window.innerHeight }; var r = s.getBoundingClientRect(); return { top: r.top, h: s.clientHeight }; }
+  function focusY() { var b = box(); return b.top + b.h * 0.42; }
 
   function apply() {
     raf = 0;
     var rs = rows(), on = rs.length > 0;
     document.documentElement.classList.toggle('drum', on);
     if (!on) return;
-    var fy = focusY(), span = window.innerHeight * 0.46;
+    var fy = focusY(), span = box().h * 0.46;
     rs.forEach(function (r) {
       var b = r.getBoundingClientRect(), c = b.top + b.height / 2, d = c - fy, t = Math.min(1, Math.abs(d) / span);
       t = t * t * (3 - 2 * t);
@@ -35,8 +38,9 @@
   }
   function focusNow(smooth) {
     var t = target(); if (!t) return;
-    var b = t.getBoundingClientRect(), top = window.scrollY + b.top + b.height / 2 - focusY();
-    window.scrollTo({ top: Math.max(0, top), behavior: smooth && !reduce ? 'smooth' : 'auto' });
+    var b = t.getBoundingClientRect(), s = sc(), how = smooth && !reduce ? 'smooth' : 'auto';
+    if (s) s.scrollTo({ top: Math.max(0, s.scrollTop + b.top + b.height / 2 - focusY()), behavior: how });
+    else window.scrollTo({ top: Math.max(0, window.scrollY + b.top + b.height / 2 - focusY()), behavior: how });
   }
 
   new MutationObserver(function () {
@@ -45,6 +49,7 @@
     had = has; lastKey = key; schedule();
   }).observe(view, { childList: true, subtree: true });
   window.addEventListener('scroll', schedule, { passive: true });
+  view.addEventListener('scroll', schedule, { passive: true });
   window.addEventListener('resize', schedule);
   window.CalFocus = { focusNow: function () { focusNow(true); } };
   setTimeout(function () {

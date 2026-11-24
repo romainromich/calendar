@@ -868,12 +868,16 @@ dialog.imp-dlg{width:min(1080px,96vw)}
   .demo-sheet-act{display:grid;gap:8px}
   .demo-sheet-act .btn{width:100%;min-height:46px}
 }
-/* компьютер: при прокрутке шапка и строка дат недели остаются наверху и закрывают сетку,
-   а не просвечивают и не перечёркивают даты */
+/* компьютер: центральная колонка — такая же карточка во всю высоту окна, как боковые.
+   Прокручивается только календарь внутри неё, поэтому верхняя панель со скруглёнными углами
+   всегда на месте, а строка дат недели прилипает к верху календаря и закрывает сетку */
 @media(min-width:761px){
-  #topbar{background:color-mix(in srgb,var(--panel) 94%,transparent);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-radius:27px 27px 0 0}
+  #center{position:sticky;top:14px;height:calc(100vh - 28px);min-height:0;overflow:hidden}
+  #topbar,#app[data-view=day] #topbar{position:relative;top:auto;background:transparent;border-radius:27px 27px 0 0}
+  #view{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain}
+  #view::-webkit-scrollbar-track{margin-bottom:22px}
   .wk{overflow-x:clip}
-  .wk-head:not(.wk-allday){position:sticky;top:var(--tbh,67px);z-index:7;background:color-mix(in srgb,var(--panel) 94%,transparent);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+  .wk-head:not(.wk-allday){position:sticky;top:0;z-index:7;background:color-mix(in srgb,var(--panel) 94%,transparent);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
 }
 /* своё выпадающее меню для <select> на компьютере (select.js) */
 .csel-pop{position:fixed;inset:auto;margin:0;box-sizing:border-box;max-width:min(420px,calc(100vw - 16px));max-height:320px;overflow:auto;overscroll-behavior:contain;
