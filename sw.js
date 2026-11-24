@@ -1,7 +1,7 @@
-const V = '71';
+const V = '72';
 const CACHE = 'calendar-v' + V;
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png']
-  .concat(['style.css', 'parse.js', 'app.js', 'notify.js', 'sync.js', 'push.js', 'backup.js', 'prep.js', 'voice.js', 'review.js', 'offline.js', 'focus.js', 'cloudsync.js', 'boot.js', 'splash.js', 'schedimport.js', 'account.js'].map((f) => './' + f + '?v=' + V));
+  .concat(['style.css', 'parse.js', 'app.js', 'notify.js', 'sync.js', 'push.js', 'backup.js', 'prep.js', 'voice.js', 'review.js', 'offline.js', 'focus.js', 'cloudsync.js', 'boot.js', 'splash.js', 'schedimport.js', 'account.js', 'select.js'].map((f) => './' + f + '?v=' + V));
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))));

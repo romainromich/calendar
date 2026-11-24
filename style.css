@@ -870,3 +870,14 @@ dialog.imp-dlg{width:min(1080px,96vw)}
   .wk{overflow-x:clip}
   .wk-head:not(.wk-allday){position:sticky;top:var(--tbh,67px);z-index:7;background:color-mix(in srgb,var(--panel) 94%,transparent);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
 }
+/* своё выпадающее меню для <select> на компьютере (select.js) */
+.csel-pop{position:fixed;inset:auto;margin:0;box-sizing:border-box;max-width:min(420px,calc(100vw - 16px));max-height:320px;overflow:auto;overscroll-behavior:contain;
+  padding:5px;border:1px solid color-mix(in srgb,var(--ink) 16%,transparent);border-radius:14px;color:var(--ink);font:inherit;font-size:14px;
+  background:color-mix(in srgb,var(--panel) 97%,transparent);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:0 14px 40px rgba(0,0,0,.35)}
+.csel-pop:focus{outline:none}
+.csel-opt{display:flex;align-items:center;gap:8px;padding:7px 28px 7px 10px;border-radius:9px;cursor:pointer;white-space:nowrap;position:relative;line-height:1.3}
+.csel-opt.active{background:var(--hover)}
+.csel-opt[aria-selected=true]{color:var(--accentText);font-weight:600}
+.csel-opt[aria-selected=true]::after{content:"";position:absolute;right:10px;top:50%;width:5px;height:9px;margin-top:-6px;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.csel-opt[aria-disabled=true]{opacity:.45;cursor:default}
+.csel-group{padding:8px 10px 4px;font-size:12px;color:var(--mute);font-weight:600}
