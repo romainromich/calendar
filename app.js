@@ -336,9 +336,14 @@
     if (c && typeof c.rem === 'number') return c.rem;
     return typeof S.settings.remDefault === 'number' ? S.settings.remDefault : null;
   }
+  // Ключевое событие — то, к чему готовятся: в дедлайнах с ⚑, к нему можно поставить подготовку.
+  // Человек может отметить это сам (поле key); если не отмечал — угадываем по календарю и названию.
+  function autoKey(e) { return e.cat === 'deadline' || /коллок|экзамен|зач[её]т|дедлайн|контрольн|защит|сдать/i.test(e.title || ''); }
   function isKey(e) {
-    if (e.prepFor || (e._m && e._m.prepFor)) return false;   // «Подготовка: коллоквиум» — не сам коллоквиум
-    return e.cat === 'deadline' || /коллок|экзамен|зач[её]т|дедлайн|контрольн|защит|сдать/i.test(e.title);
+    var m = e._m || e;
+    if (e.prepFor || m.prepFor) return false;   // «Подготовка: коллоквиум» — не сам коллоквиум
+    if (m.key === true || m.key === false) return m.key;
+    return autoKey(e);
   }
   function evLabel(e) { return (e._cont ? '↪ ' : '') + (isKey(e) ? '⚑ ' : '') + e.title; }
   /* мягкие переносы для узких колонок недели: «Програм-мирование», а не «Программир / ование» */
@@ -900,10 +905,10 @@
   }
 
   /* ---------- изменение событий и повторов ---------- */
-  var FIELDS = ['title', 'start', 'end', 'cat', 'notes', 'allDay', 'days', 'rem', 'obs', 'place', 'travel', 'teacher', 'kind', 'imp', 'lesson'];
+  var FIELDS = ['title', 'start', 'end', 'cat', 'notes', 'allDay', 'days', 'rem', 'obs', 'place', 'travel', 'teacher', 'kind', 'imp', 'lesson', 'key'];
   function baseFields(m) {
     return { title: m.title, start: m.start, end: m.end, cat: m.cat, notes: m.notes || '', allDay: m.allDay, days: m.days, rem: m.rem, obs: m.obs,
-      place: m.place, travel: m.travel, teacher: m.teacher, kind: m.kind, imp: m.imp, lesson: m.lesson };
+      place: m.place, travel: m.travel, teacher: m.teacher, kind: m.kind, imp: m.imp, lesson: m.lesson, key: m.key };
   }
 
   /* ---------- «Отменить» ---------- */
@@ -1241,7 +1246,9 @@
     Array.prototype.forEach.call($('#evDays').querySelectorAll('input'), function (i) { i.checked = days.indexOf(i.value) >= 0; });
     syncRep();
     $('#evDelete').style.display = ev && !ro ? '' : 'none';
-    $('#evPrep').style.display = ev && !ro && !ev._m.prepFor && isKey(ev) && ev.date >= ymd(new Date()) && window.CalPrep ? '' : 'none';
+    $('#evKey').checked = isKey(d);
+    $('#evKey').disabled = ro || !!(ev && ev._m.prepFor);
+    paintPrepBtn();
     $('#evSave').style.display = ro ? 'none' : '';
     $('#evRo').hidden = !ro;
     Array.prototype.forEach.call($('#evForm').querySelectorAll('input,select,textarea'), function (i) { i.disabled = ro; });
@@ -1290,9 +1297,18 @@
     go(obsUri('new', { file: file, content: content }));
   });
 
+  // явная отметка хранится, только если она расходится с догадкой: «Скинуть бдз» без флажка остаётся без поля
+  function keyField(title, cat) { var on = $('#evKey').checked; return on === autoKey({ title: title, cat: cat }) ? undefined : on; }
+  function paintPrepBtn() {
+    var ev = editing;
+    $('#evPrep').style.display = ev && !ev._m.ro && !ev._m.prepFor && $('#evKey').checked && ev.date >= ymd(new Date()) && window.CalPrep ? '' : 'none';
+  }
+  $('#evKey').addEventListener('change', paintPrepBtn);
   $('#evPrep').addEventListener('click', function () {
     if (!editing || !window.CalPrep) return;
-    var occ = editing; evDlg.close(); window.CalPrep.open(occ);
+    var occ = editing, m = occ._m, k = keyField(m.title, m.cat);
+    if (m.key !== k) { if (k === undefined) delete m.key; else m.key = k; mark(m); save(); render(); }   // отметку «нужна подготовка» сохраняем сразу
+    evDlg.close(); window.CalPrep.open(occ);
   });
   $('#evBack').addEventListener('click', function () { evDlg.close(); });
   $('#evCancel').addEventListener('click', function () { evDlg.close(); });
@@ -1323,6 +1339,7 @@
     data.place = (les ? $('#evRoom').value : $('#evPlace').value).trim() || undefined;
     data.teacher = les ? $('#evTeacher').value.trim() || undefined : undefined;
     data.kind = les ? $('#evKind').value || undefined : undefined;
+    data.key = keyField(data.title, data.cat);
     if (data.place && data.travel) { (S.settings.places || (S.settings.places = {}))[data.place.toLowerCase()] = data.travel; }
     if (!allDay) data.days = undefined; else if (editing && editing._m.days) data.days = editing._m.days;
     var occ = editing;

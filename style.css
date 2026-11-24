@@ -955,3 +955,6 @@ input.dpick{cursor:pointer;caret-color:transparent;font-variant-numeric:tabular-
 .typeseg button[aria-checked=true]{background:var(--accent);color:var(--onaccent)}
 .typeseg button:not([aria-checked=true]):hover{background:var(--hover);color:var(--ink)}
 #evLessonRow[hidden],#evPlaceWrap[hidden]{display:none}
+/* «Весь день» и «Нужна подготовка» в одной строке */
+.checks{display:flex;flex-wrap:wrap;gap:8px 10px}
+.checks .check{margin-bottom:14px}

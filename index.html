@@ -4,17 +4,17 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https://*.googleusercontent.com; font-src 'self' data:; connect-src 'self' https://*.workers.dev https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<script src="boot.js?v=79"></script>
+<script src="boot.js?v=80"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Календарь</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#08090C">
-<link rel="stylesheet" href="style.css?v=79">
+<link rel="stylesheet" href="style.css?v=80">
 </head>
 <body>
 <div id="splash" aria-hidden="true"><div class="sp-ic"><i class="sp-t1"></i><i class="sp-m"><b class="sp-dn">ПН</b><b class="sp-nm">16</b></i><i class="sp-t3"></i></div></div>
-<script src="splash.js?v=79"></script>
+<script src="splash.js?v=80"></script>
 <div id="app" data-tab="cal">
 <div id="scrim"></div>
 
@@ -141,7 +141,10 @@
       <label class="field">Аудитория<input id="evRoom" type="text" autocomplete="off" placeholder="3204"></label>
       <label class="field">Преподаватель<input id="evTeacher" type="text" autocomplete="off" list="evTeacherList" placeholder="Иванова А. П."><datalist id="evTeacherList"></datalist></label>
     </div>
-    <label class="check"><input id="evAllDay" type="checkbox"> Весь день</label>
+    <div class="checks">
+      <label class="check"><input id="evAllDay" type="checkbox"> Весь день</label>
+      <label class="check" title="Контрольная, коллоквиум, экзамен: показывается в «Ближайших дедлайнах» с флажком ⚑, к нему можно поставить подготовку"><input id="evKey" type="checkbox"> ⚑ Нужна подготовка</label>
+    </div>
     <div class="row3">
       <label class="field">Дата<input id="evDate" type="date" required></label>
       <label class="field" id="evStartWrap">Начало<input id="evStart" type="time" required></label>
@@ -200,22 +203,22 @@
 </dialog>
 
 
-<script src="parse.js?v=79"></script>
-<script src="app.js?v=79"></script>
-<script src="select.js?v=79"></script>
-<script src="time.js?v=79"></script>
-<script src="date.js?v=79"></script>
-<script src="account.js?v=79"></script>
-<script src="notify.js?v=79"></script>
-<script src="sync.js?v=79"></script>
-<script src="push.js?v=79"></script>
-<script src="backup.js?v=79"></script>
-<script src="cloudsync.js?v=79"></script>
-<script src="prep.js?v=79"></script>
-<script src="voice.js?v=79"></script>
-<script src="review.js?v=79"></script>
-<script src="offline.js?v=79"></script>
-<script src="focus.js?v=79"></script>
-<script src="schedimport.js?v=79"></script>
+<script src="parse.js?v=80"></script>
+<script src="app.js?v=80"></script>
+<script src="select.js?v=80"></script>
+<script src="time.js?v=80"></script>
+<script src="date.js?v=80"></script>
+<script src="account.js?v=80"></script>
+<script src="notify.js?v=80"></script>
+<script src="sync.js?v=80"></script>
+<script src="push.js?v=80"></script>
+<script src="backup.js?v=80"></script>
+<script src="cloudsync.js?v=80"></script>
+<script src="prep.js?v=80"></script>
+<script src="voice.js?v=80"></script>
+<script src="review.js?v=80"></script>
+<script src="offline.js?v=80"></script>
+<script src="focus.js?v=80"></script>
+<script src="schedimport.js?v=80"></script>
 </body>
 </html>
