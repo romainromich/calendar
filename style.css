@@ -886,3 +886,20 @@ dialog.imp-dlg{width:min(1080px,96vw)}
 .csel-opt[aria-selected=true]::after{content:"";position:absolute;right:10px;top:50%;width:5px;height:9px;margin-top:-6px;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(45deg)}
 .csel-opt[aria-disabled=true]{opacity:.45;cursor:default}
 .csel-group{padding:8px 10px 4px;font-size:12px;color:var(--mute);font-weight:600}
+/* выбор времени (time.js): поле-кнопка, барабан и список */
+input.tpick{cursor:pointer;caret-color:transparent;font-variant-numeric:tabular-nums}
+.tw-pop{position:fixed;inset:auto;margin:0;box-sizing:border-box;width:230px;padding:10px 10px 12px;border:1px solid color-mix(in srgb,var(--ink) 16%,transparent);border-radius:18px;color:var(--ink);font:inherit;
+  background:color-mix(in srgb,var(--panel) 97%,transparent);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:0 14px 40px rgba(0,0,0,.35)}
+.tw-pop:focus{outline:none}
+.tw-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px 6px;font-size:13px;color:var(--mute);font-weight:600}
+.tw-ok{min-height:30px;height:30px;padding:0 14px;font-size:13px}
+.tw-cols{position:relative;display:flex;align-items:stretch;height:180px}
+.tw-band{position:absolute;left:0;right:0;top:72px;height:36px;border-radius:10px;background:var(--hover);pointer-events:none}
+.tw-col{position:relative;flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none;border-radius:10px;
+  -webkit-mask-image:linear-gradient(transparent,#000 32%,#000 68%,transparent);mask-image:linear-gradient(transparent,#000 32%,#000 68%,transparent)}
+.tw-col::-webkit-scrollbar{display:none}
+.tw-col:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tw-item{height:36px;line-height:36px;text-align:center;scroll-snap-align:center;font-size:21px;font-variant-numeric:tabular-nums;color:var(--mute);cursor:pointer;user-select:none}
+.tw-item.on{color:var(--ink);font-weight:700}
+.tw-sep{position:relative;align-self:center;font-size:21px;font-weight:700;padding:0 2px;pointer-events:none}
+#habitForm input.tpick{flex:0 0 96px;min-width:0}

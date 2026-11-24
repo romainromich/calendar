@@ -848,8 +848,13 @@
   function habitTime(hb) {
     var inp = h('input', { type: 'time', class: 'hab-at-in', value: hb.at != null ? hm(hb.at) : '', tabindex: '-1', 'aria-hidden': 'true',
       onchange: function () { var m = /^(\d{1,2}):(\d{2})$/.exec(inp.value); hb.at = m ? +m[1] * 60 + +m[2] : undefined; save(); render(); } });
-    return h('span', { class: 'hab-at-wrap' }, inp, h('button', { type: 'button', class: 'durchip hab-at' + (hb.at != null ? ' set' : ''), title: 'Время в линии дня (необязательно)',
-      'aria-label': 'Время привычки: ' + hb.title, onclick: function () { try { inp.showPicker(); } catch (e) { inp.focus(); inp.click(); } } }, hb.at != null ? hm(hb.at) : '+ время'));
+    var btn = h('button', { type: 'button', class: 'durchip hab-at' + (hb.at != null ? ' set' : ''), title: 'Время в линии дня (необязательно)',
+      'aria-label': 'Время привычки: ' + hb.title, onclick: function () {
+        // свой список, как у «+ время» задач; без него — системный выбор
+        if (window.CalTime) window.CalTime.list(btn, hb.at != null ? hb.at : null, function (v) { hb.at = v == null ? undefined : v; save(); render(); }, { label: 'Время привычки: ' + hb.title });
+        else { try { inp.showPicker(); } catch (e) { inp.focus(); inp.click(); } }
+      } }, hb.at != null ? hm(hb.at) : '+ время');
+    return h('span', { class: 'hab-at-wrap' }, inp, btn);
   }
   function renderHabits() {
     var root = $('#habits'), td = ymd(today());

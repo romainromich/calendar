@@ -545,6 +545,7 @@
     }
     function inp(val, onch, type, cls) {
       var i = h('input', { type: type || 'text', value: val == null ? '' : val, class: cls || '', inputmode: cls === 'imp-t' ? 'numeric' : 'text', placeholder: cls === 'imp-t' ? '09:00' : '' });
+      if (cls === 'imp-t' && window.CalTime) window.CalTime.enhance(i, 'wheel');   // время пары — барабаном
       i.addEventListener('change', function () { onch(i.value); }); return i;
     }
     function paintRows() {
