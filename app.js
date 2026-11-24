@@ -120,25 +120,87 @@
   }
   function mark(e) { e.dirty = true; delete e.demo; return e; }
 
+  /* Демонстрационное расписание при первом запуске: обычная студенческая неделя с числителем
+     и знаменателем, аудиториями и преподавателями, чтобы было видно, как всё устроено.
+     Всё помечено demo: такие события не уходят в Google, не присылают напоминаний и удаляются
+     одной кнопкой или при импорте своего расписания. Отредактированное событие становится своим. */
+  var DEMO_UNTIL_WEEKS = 8;
   function seed() {
     if (S.seeded) return;
     S.seeded = true;
-    var ws = startOfWeek(new Date());
-    var rows = [
-      [0, 9, 10.5, 'Матанализ', 'study'], [0, 10.67, 12.17, 'Физика', 'study'], [0, 15, 16.5, 'Слайды к презентации', 'study'], [0, 19, 20.25, 'Зал', 'sport'],
-      [1, 9, 10.5, 'Линейная алгебра', 'study'], [1, 12.33, 13.83, 'Программирование', 'study'], [1, 15, 16, 'Английский', 'study'],
-      [2, 9, 10.5, 'Матанализ', 'study'], [2, 13, 15, 'Лаба по физике', 'study'], [2, 19, 20.25, 'Зал', 'sport'],
-      [3, 10.67, 12.17, 'Линейная алгебра', 'study'], [3, 16, 17.5, 'Подготовка к тесту', 'study'],
-      [4, 9, 10.5, 'Программирование', 'study'], [4, 17.5, 18, 'Сдать лабу', 'deadline'],
-      [5, 11, 12.25, 'Зал', 'sport'], [5, 17, 19, 'Встреча', 'personal'], [6, 20, 20.5, 'План недели', 'personal']
+    var ws = startOfWeek(new Date()), until = ymd(addDays(ws, 7 * DEMO_UNTIL_WEEKS));
+    // эта неделя — числитель; если задано начало семестра, сверяемся с ним
+    var odd = 0;
+    if (S.settings.semStart) {
+      var n = Math.floor(Math.round((ws - startOfWeek(parseYmd(S.settings.semStart))) / 864e5) / 7) + 1;
+      if (n >= 1 && n % 2 === 0) odd = 7;
+    }
+    var even = 7 - odd;
+    // [день 0–6, начало, конец, предмет, вид, ауд., преподаватель, недели: 1 — каждую, 'ч' — числитель, 'з' — знаменатель]
+    var B = [[9, 0, 10, 20], [10, 30, 11, 50], [12, 0, 13, 20], [14, 0, 15, 20], [15, 30, 16, 50]];
+    var pairs = [
+      [0, 0, 'Математический анализ', 'лекция', '3204', 'Иванова А. П.', 1],
+      [0, 1, 'Физика', 'практика', '1105', 'Петров С. В.', 'ч'],
+      [0, 1, 'Физика', 'лабораторная', '4120', 'Петров С. В.', 'з'],
+      [1, 1, 'Линейная алгебра', 'лекция', '1202', 'Смирнов Д. А.', 1],
+      [1, 2, 'Программирование', 'лабораторная', '3118', 'Кузнецова Е. Н.', 1],
+      [1, 3, 'Иностранный язык', 'практика', '4230', 'Орлова М. И.', 'ч'],
+      [2, 0, 'Математический анализ', 'практика', '3244', 'Иванова А. П.', 1],
+      [2, 2, 'Физика', 'лекция', '1203', 'Петров С. В.', 1],
+      [2, 3, 'Физическая культура', 'практика', 'Спортзал', '', 1],
+      [3, 1, 'Линейная алгебра', 'практика', '3102', 'Смирнов Д. А.', 'з'],
+      [3, 2, 'Программирование', 'лекция', '1202', 'Кузнецова Е. Н.', 1],
+      [4, 0, 'Иностранный язык', 'практика', '4304', 'Орлова М. И.', 1],
+      [4, 1, 'История России', 'лекция', '1202', 'Белова Т. С.', 'ч'],
+      [4, 1, 'История России', 'семинар', '2210', 'Белова Т. С.', 'з']
     ];
-    rows.forEach(function (r) {
-      S.events.push({ id: uid(), title: r[3], date: ymd(addDays(ws, r[0])), start: Math.round(r[1] * 60), end: Math.round(r[2] * 60), cat: r[4], notes: '', demo: true });
+    pairs.forEach(function (p) {
+      var b = B[p[1]], off = p[6] === 'з' ? even : p[6] === 'ч' ? odd : 0, d = addDays(ws, p[0] + off);
+      S.events.push({ id: uid(), title: p[2], date: ymd(d), start: b[0] * 60 + b[1], end: b[2] * 60 + b[3], cat: 'study', notes: '',
+        kind: p[3], place: p[4], teacher: p[5] || undefined, rep: { type: 'weekly', interval: p[6] === 1 ? 1 : 2, days: [d.getDay()], until: until }, ex: [], demo: true });
     });
-    S.tasks.push({ id: uid(), title: 'Сдать лабу по физике', due: ymd(addDays(ws, 4)), done: false });
-    S.tasks.push({ id: uid(), title: 'Дописать слайды презентации', due: ymd(ws), done: false });
-    S.habits.push({ id: uid(), title: 'Взвешивание утром' }, { id: uid(), title: 'Английский 20 минут' }, { id: uid(), title: 'Конспект дня' });
+    var other = [
+      [2, 19, 0, 20, 15, 'Зал', 'sport', true], [5, 11, 0, 12, 15, 'Зал', 'sport', true],
+      [6, 20, 0, 20, 30, 'План недели', 'personal', true],
+      [4, 17, 30, 18, 0, 'Сдать отчёт по лабе', 'deadline', false], [5, 17, 0, 19, 0, 'Встреча с друзьями', 'personal', false]
+    ];
+    other.forEach(function (o) {
+      var d = addDays(ws, o[0]);
+      S.events.push({ id: uid(), title: o[5], date: ymd(d), start: o[1] * 60 + o[2], end: o[3] * 60 + o[4], cat: o[6], notes: '',
+        rep: o[7] ? { type: 'weekly', interval: 1, days: [d.getDay()], until: until } : null, ex: [], demo: true });
+    });
+    S.tasks.push({ id: uid(), title: 'Решить ДЗ по матанализу', due: ymd(addDays(ws, 2)), done: false, demo: true });
+    S.tasks.push({ id: uid(), title: 'Подготовить отчёт по лабе', due: ymd(addDays(ws, 4)), done: false, demo: true });
+    S.habits.push({ id: uid(), title: 'Английский 20 минут', demo: true }, { id: uid(), title: 'Конспект дня', demo: true }, { id: uid(), title: 'Прогулка', demo: true });
     save();
+  }
+  function hasDemo() {
+    return S.events.some(function (e) { return e.demo; }) || S.tasks.some(function (t) { return t.demo; }) || S.habits.some(function (x) { return x.demo; });
+  }
+  // удалить всё демонстрационное; silent — без всплывающего «Отменить» (когда удаление часть импорта)
+  function clearDemo(silent) {
+    var snap = snapshot();
+    S.events.filter(function (e) { return e.demo; }).forEach(dropMaster);
+    S.tasks = S.tasks.filter(function (t) { return !t.demo; });
+    S.habits.filter(function (x) { return x.demo; }).forEach(function (x) { delete S.log[x.id]; });
+    S.habits = S.habits.filter(function (x) { return !x.demo; });
+    save(); render();
+    if (!silent) offerUndo(snap, 'Демонстрационное расписание удалено');
+  }
+  /* плашка над календарём, пока есть демо и её не скрыли */
+  function renderDemoBar() {
+    var bar = $('#demoBar');
+    if (!bar) return;
+    if (!hasDemo() || S.settings.demoBarHidden) { bar.hidden = true; bar.replaceChildren(); return; }
+    bar.hidden = false;
+    bar.replaceChildren(
+      h('div', { class: 'demo-txt' },
+        h('b', null, 'Это демонстрационное расписание'),
+        h('span', null, 'Оно показывает, как всё устроено: пары по числителю и знаменателю, аудитории, задачи и привычки. Загрузите своё расписание — демо удалится.')),
+      h('div', { class: 'demo-act' },
+        h('button', { type: 'button', class: 'btn primary', onclick: function () { if (window.CalImport) window.CalImport.open(); } }, 'Загрузить своё', h('span', { class: 'demo-long' }, ' расписание')),
+        h('button', { type: 'button', class: 'btn', onclick: function () { clearDemo(); } }, 'Удалить демо')),
+      h('button', { type: 'button', class: 'icon-btn sm demo-x', 'aria-label': 'Скрыть плашку', title: 'Скрыть плашку (демо останется)', onclick: function () { S.settings.demoBarHidden = true; save(); renderDemoBar(); } }, '×'));
   }
 
   /* ---------- даты и вид ---------- */
@@ -298,7 +360,7 @@
   function render() {
     applyTheme();
     $('#app').setAttribute('data-view', S.settings.view);
-    renderTheme(); renderTop(); renderMini(); renderCats(); renderView(); renderDeadlines(); renderTasks(); renderHabits(); renderLoad();
+    renderTheme(); renderTop(); renderDemoBar(); renderMini(); renderCats(); renderView(); renderDeadlines(); renderTasks(); renderHabits(); renderLoad();
     $('#logo').textContent = new Date().getDate();
   }
 
@@ -811,7 +873,7 @@
 
   /* ---------- «Отменить» ---------- */
   var undoToast = null;
-  function snapshot() { return JSON.stringify({ events: S.events, tasks: S.tasks, tomb: S.tomb }); }
+  function snapshot() { return JSON.stringify({ events: S.events, tasks: S.tasks, tomb: S.tomb, habits: S.habits, log: S.log }); }
   function offerUndo(snap, msg) {
     if (undoToast) undoToast.remove();
     var t = undoToast = toast(msg, { ms: 8000, action: ['Отменить', function () {
@@ -819,6 +881,7 @@
       S.events.forEach(function (e) { cur[e.id] = JSON.stringify(e); });
       old.events.forEach(function (e) { if (cur[e.id] !== JSON.stringify(e)) mark(e); });
       S.events = old.events; S.tasks = old.tasks; S.tomb = old.tomb;
+      if (old.habits) { S.habits = old.habits; S.log = old.log || S.log; }
       save(); render(); undoToast = null;
     }] });
     return t;
@@ -1536,7 +1599,7 @@
   function srvHeaders(extra) { var hd = Object.assign({ 'Content-Type': 'text/plain' }, extra || {}), t = srvToken(); if (t) hd['X-Cal-Token'] = t; return hd; }
 
   window.Cal = {
-    srvToken: srvToken, srvHeaders: srvHeaders, snapshot: snapshot, offerUndo: offerUndo, startOfWeek: startOfWeek,
+    srvToken: srvToken, srvHeaders: srvHeaders, snapshot: snapshot, hasDemo: hasDemo, clearDemo: clearDemo, offerUndo: offerUndo, startOfWeek: startOfWeek,
     get S() { return S; }, set S(v) { S = v; },
     save: save, render: render, uid: uid, ymd: ymd, parseYmd: parseYmd, shiftDate: shiftDate, dayDiff: dayDiff, addDays: addDays,
     remNote: remNote, occursOn: occursOn, eventsOn: eventsOn, catById: catById, hm: hm, toast: toast, mark: mark, normRep: normRep, remMinutes: remMinutes,

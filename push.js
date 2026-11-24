@@ -39,7 +39,7 @@
     for (var i = 0; i <= 2; i++) {
       var key = C.ymd(C.addDays(base0, i));
       C.eventsOn(key, true).forEach(function (e) {
-        if (e._cont) return;
+        if (e._cont || e._m.demo) return;
         if (e.travel && !e.allDay) {
           var dd = C.parseYmd(key), st = new Date(dd.getFullYear(), dd.getMonth(), dd.getDate(), Math.floor(e.start / 60), e.start % 60).getTime();
           var lat = st - (e.travel + C.leaveBuf()) * 60000;

@@ -528,6 +528,8 @@
     cat.value = cats.some(function (c) { return c.id === 'study'; }) ? 'study' : (st.defaultCat || cats[0].id);
     var prev = S().events.filter(function (e) { return e.imp; }), replace = h('input', { type: 'checkbox' });
     replace.checked = prev.length > 0;
+    var demo = C.hasDemo && C.hasDemo(), dropDemo = h('input', { type: 'checkbox' });
+    dropDemo.checked = true;
     var weekNote = h('div', { class: 'mute small' });
     function paintWeek() {
       if (!sem.value) { weekNote.textContent = ''; return; }
@@ -566,7 +568,7 @@
     function plural(n) { var a = n % 10, b = n % 100; return a === 1 && b !== 11 ? 'занятие' : a >= 2 && a <= 4 && (b < 12 || b > 14) ? 'занятия' : 'занятий'; }
     go.addEventListener('click', function () {
       if (!ics && !sem.value) { sem.focus(); return; }
-      apply({ sem: sem.value, from: from.value || sem.value, until: until.value || guessEnd(sem.value), cat: cat.value, replace: replace.checked && prev.length });
+      apply({ sem: sem.value, from: from.value || sem.value, until: until.value || guessEnd(sem.value), cat: cat.value, replace: replace.checked && prev.length, dropDemo: demo && dropDemo.checked });
     });
     paintRows(); count();
 
@@ -578,6 +580,7 @@
     dlg.replaceChildren(
       head('Проверьте занятия', (state.note || '') + (state.src === 'image' ? 'Распознано нейросетью — проверьте недели и аудитории. ' : '') + 'Снимите галочку, чтобы пропустить занятие.'),
       settings, ics ? null : weekNote,
+      demo ? h('label', { class: 'imp-replace' }, dropDemo, ' Удалить демонстрационное расписание') : null,
       prev.length ? h('label', { class: 'imp-replace' }, replace, ' Заменить прошлый импорт (' + prev.length + ' ' + plural(prev.length).replace('занят', 'событ').replace('событие', 'событие') + ')') : null,
       h('div', { class: 'imp-table' }, h('table', null,
         h('thead', null, h('tr', null, ['', ics ? 'Дата' : 'День', 'Время', 'Предмет', 'Вид', 'Ауд.'].concat(ics ? [] : ['Преподаватель', 'Неделя']).map(function (t) { return h('th', null, t); }))),
@@ -592,6 +595,7 @@
     if (o.replace) {
       S().events.filter(function (e) { return e.imp; }).forEach(function (e) { C.dropMaster(e); });
     }
+    if (o.dropDemo) C.clearDemo(true);    // откат — общей кнопкой «Отменить» импорта (снимок сделан выше)
     if (state.src !== 'ics' && o.sem) st.semStart = o.sem;
     state.rows.forEach(function (r) {
       if (!r.on || r.start == null || !String(r.title || '').trim()) { if (r.on) skipped++; return; }

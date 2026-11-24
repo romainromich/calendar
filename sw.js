@@ -1,4 +1,4 @@
-const V = '66';
+const V = '67';
 const CACHE = 'calendar-v' + V;
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png']
   .concat(['style.css', 'parse.js', 'app.js', 'notify.js', 'sync.js', 'push.js', 'backup.js', 'prep.js', 'voice.js', 'review.js', 'offline.js', 'focus.js', 'cloudsync.js', 'boot.js', 'splash.js', 'schedimport.js', 'account.js'].map((f) => './' + f + '?v=' + V));
